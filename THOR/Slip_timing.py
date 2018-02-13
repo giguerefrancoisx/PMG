@@ -10,17 +10,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from PMG.COM.openbook import openHDF5
 import PMG.COM.plotstyle as style
+import PMG.COM.table as tb
 
 THOR = os.fspath('P:/AHEC/Data/THOR/')
 chlist = ['11NECKLO00THFOXA', '11NECKLO00THFOYA', '11PELV0000THACXA', '11FEMRLE00THFOZB']
 
 time, fulldata = openHDF5(THOR, chlist)
 
-table = pd.read_excel('P:/AHEC/thortable.xlsx', sheetname='All')
-table = table.dropna(axis=0, thresh=5).dropna(axis=1, how='all')
-
-ok = table[table.CBL_BELT.isin(['OK'])]
-slip = table[table.CBL_BELT.isin(['SLIP']) & ~table.T1.isnull() & ~table.T1.isin(['?'])]
+ok, slip = tb.split(tb.get('THOR'), column='CBL_BELT', categories=['OK','SLIP']).values()
+slip = slip[~slip.T1.isnull() & ~slip.T1.isin(['?'])]
 
 bin1 = slip[(0.060<=slip.T1) & (slip.T1<0.075)]
 bin2 = slip[(0.075<=slip.T1) & (slip.T1<0.090)]

@@ -12,6 +12,7 @@ from PMG.COM.openbook import openHDF5
 import PMG.COM.data as data
 from PMG.COM.outliers import check_and_clean
 import PMG.COM.plotstyle as style
+import PMG.COM.table as tb
 
 THOR = os.fspath('P:/AHEC/Data/THOR/')
 chlist = ['11CHSTLEUPTHDSXB', '11CHSTRIUPTHDSXB', '11CHSTRILOTHDSXB', '11CHSTLELOTHDSXB']
@@ -22,11 +23,7 @@ for ch in chlist:
     print(ch)
     fulldata[ch] = check_and_clean(fulldata[ch])
 
-table = pd.read_excel('P:/AHEC/thortable.xlsx', sheetname='All')
-table = table.dropna(axis=0, thresh=5).dropna(axis=1, how='all')
-
-ok = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
-slip = table[table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+ok, slip = tb.tcns(tb.split(tb.get('THOR'), column='CBL_BELT', categories=['OK','SLIP']))
 
 #%%
 cd = style.colordict(chlist)
@@ -133,34 +130,54 @@ style.maximize()
 #%%
 plt.close('all')
 colors = ['tab:blue', 'tab:orange']
-ticks = np.linspace(1,6,6).astype(np.int)
+s = 2
+ticks = np.linspace(0,s,7).round(1)#.astype(np.int)
 tick_labels = list(map(str,ticks))
 
-plt.figure()
-ax = plt.subplot(111, polar=True)
+fig, axs = style.subplots(1,2, subplot_kw=dict(projection='polar'))
+for ax in axs:
+    ax.set_theta_offset(np.pi*3/4)
+    ax.set_theta_direction(-1)
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(categories)
+    ax.set_rlabel_position(135)
+    ax.set_yticks(ticks)
+    ax.set_yticklabels(tick_labels, color='grey')
+    ax.set_title('Chest deflections')
+    ax.text((135+2)/180*np.pi, 1.02*s, 'Fraction of mean')
 
-ax.set_theta_offset(np.pi*3/4)
-ax.set_theta_direction(-1)
-ax.set_xticks(angles[:-1])
-ax.set_xticklabels(categories)
-ax.set_rlabel_position(135)
-ax.set_yticks(ticks)
-ax.set_yticklabels(tick_labels, color='grey')
-ax.set_title('Title')
+    ax.plot(np.linspace(0, 2*np.pi,180), s/2*np.ones(180,), color='k', linewidth=0.5)
 
-maxs = pd.concat([ok_df,slip_df]).max(axis=0)
+#scaler = pd.concat([ok_df,slip_df]).max(axis=0)/s
+scaler = ok_df.mean(axis=0)/(s/2)
 
+ok_square = np.array((ok_df/scaler).mean())
+slip_square = np.array((slip_df/scaler).mean())
+ok_square = np.append(ok_square, ok_square[0])
+slip_square = np.append(slip_square, slip_square[0])
+
+ok_std = np.array((ok_df/scaler).std())/2
+slip_std = np.array((slip_df/scaler).std())/2
+ok_std = np.append(ok_std, ok_std[0])
+slip_std = np.append(slip_std, slip_std[0])
+
+ax = axs[0]
 for i, df in enumerate([ok_df, slip_df]):
 
     for tcn in df.index:
-        df2 = 6*df/maxs#df.max(axis=0)
+        df2 = df/scaler#df.max(axis=0)
         values = df2.loc[tcn].values.flatten().tolist()
         values += values[:1]
         ax.plot(angles, values, linewidth=1, linestyle='solid', color=colors[i], alpha=0.5)
 
+ax = axs[1]
+ax.plot(angles, ok_square, color=colors[0], linewidth=2)
+ax.plot(angles, slip_square, color=colors[1], linewidth=2)
+#ax.fill_between(angles, ok_square+ok_std, ok_square-ok_std, color=colors[0], linewidth=2, alpha=0.25)
+#ax.fill_between(angles, slip_square+slip_std, slip_square-slip_std, color=colors[1], linewidth=2, alpha=0.25)
 
-
-ax.plot(np.nan, np.nan, label='Ok', color=colors[0])
-ax.plot(np.nan, np.nan, label='Slip', color=colors[1])
-ax.set_ylim(0,6)
-ax.legend()
+for ax in axs:
+    ax.plot([np.nan], [np.nan], label='Ok', color=colors[0])
+    ax.plot([np.nan], [np.nan], label='Slip', color=colors[1])
+    ax.set_ylim(0,s)
+    ax.legend()
