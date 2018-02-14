@@ -55,6 +55,8 @@ def openHDF5(directory, channels=None):
             fulldata = {}
 
             if channels is not None:
+                if isinstance(channels, str):
+                    channels = [channels]
                 for channel in channels:
                     chdata = data_store.select('C'+channel)
                     fulldata[channel] = chdata.iloc[:,1:]

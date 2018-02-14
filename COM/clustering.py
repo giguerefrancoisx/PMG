@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import cdist, pdist
-from PMG.COM.data import import_SAI, process
+from PMG.COM.data import import_data, process
 from PMG.COM.plotstyle import sqfactors, subplots
 
 def make_labels(raw, project, tcns):
@@ -190,7 +190,7 @@ def preprocess(raw, norm=True, smooth=True):
     datadf = (datadf - datadf.min().min())/(datadf.max().max() - datadf.min().min())-sign
     return datadf
 
-def cluster(channel, sl, SAI, project, output, N=6, tcns=None, norm=True,
+def cluster(channel, sl, data, project, output, N=6, tcns=None, norm=True,
             smooth=True, plot_all=True, plot_data=True, matrix=False, tag='dtw'):
     """Clusters the data provided into N groups.
 
@@ -200,8 +200,8 @@ def cluster(channel, sl, SAI, project, output, N=6, tcns=None, norm=True,
         ISO code for channel of interest. ex: '11PELV0000THACXA'
     sl:
         slice object for the time interval of interest. ex: slice(200,1650)
-    SAI:
-        location of the SAI folder from which to extract data. ex: 'P:/AHEC/SAI/'
+    data:
+        location of the data folder from which to open HDF5 store. ex: 'P:/AHEC/DATA/'
     project:
         one of 'AHEC', 'BOOSTER', 'THOR'
     output:
@@ -238,7 +238,7 @@ def cluster(channel, sl, SAI, project, output, N=6, tcns=None, norm=True,
 #    t, raw, labels, lbd = import_data(channel, sl, SAI, project, tcns)
 #    datadf = preprocess(raw, norm, smooth)
 #    from GitHub.COM.data import import_SAI, process
-    t, raw = import_SAI(SAI, channel, tcns, sl)
+    t, raw = import_data(data, channel, tcns, sl)
     labels, lbd = make_labels(raw, project, tcns)
     datadf = process(raw, norm, smooth)
     X = np.array(datadf.transpose())
@@ -279,9 +279,9 @@ if __name__ == '__main__':
 #              '11CHST0000H3ACXC', '11CHST0000THACXC', '11NECKLO00THFOXA',
 #              '11PELV0000H3ACXA', '11PELV0000THACXA']
 #    channel = chlist[7]
-    channel = '11HEAD0000THACXA'
+    channel = '11FEMRLE00THFOZB'
     sl = slice(100,1600)
-    SAI = os.fspath('P:/AHEC/SAI/')
+    data = os.fspath('P:/AHEC/DATA/THOR/')
     project = 'THOR'
     output = 'P:/AHEC/Plots/Clustering/THOR/'
 #    tcns = ['TC15-163', 'TC11-008', 'TC09-027', 'TC14-035', 'TC13-007',
@@ -291,12 +291,11 @@ if __name__ == '__main__':
     table = pd.read_excel('P:/AHEC/thortable.xlsx', sheetname='All')
     tcns = table[table['CBL_BELT'].isin(['SLIP','OK']) & table['TYPE'].isin(['Frontale/Véhicule'])]['CIBLE'].tolist()
 
-
 #    tcns=None
 
-    clusters, *data = cluster(channel, sl, SAI, project, output, N=4, tcns=tcns,
+    clusters, *data = cluster(channel, sl, data, project, output, N=4, tcns=tcns,
                        norm=False, smooth=True, plot_all=True, plot_data=True,
-                       matrix=False, tag='HEAD-n')
+                       matrix=False, tag='FEMRL-n')
 
 #%% Time stuff
 #import time as timer

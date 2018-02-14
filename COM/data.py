@@ -10,11 +10,11 @@ import pandas as pd
 from PMG.COM.openbook import openHDF5
 from PMG.COM.outliers import check_and_clean, clean_outliers
 
-def import_SAI(SAI, channel, tcns=None, sl=slice(None), check=True):
+def import_data(directory, channel, tcns=None, sl=slice(None), check=True):
     """Import a channel's dataframe, cleaned of outliers. Optionally filter by
     list of tcns and slice. Set check to False to skip 'view  outliers' prompt
     """
-    time, fulldata = openHDF5(os.fspath(SAI), channel)
+    time, fulldata = openHDF5(os.fspath(directory), [channel])
     data = fulldata[channel]
     raw = data[sl]
     t = time[sl]

@@ -48,8 +48,8 @@ for i, ch in enumerate(chlist):
     ax.bar(bin_edges[1:], -hist, 60/40, label=titles[ch]+' slip', color=cd[ch], alpha=0.75)
 
     ax.set_title(titles[ch])
-    ax.set_xlabel('Time')
-    ax.set_ylabel('Displacement')
+    ax.set_xlabel('Displacement')
+    ax.set_ylabel('Frequency')
     ax.legend()
     ax.grid()
 
@@ -95,7 +95,7 @@ plt.grid()
 #'var4': [7, 31, 33, 14],
 #'var5': [28, 15, 32, 14]
 #})
-plt.close('all')
+#plt.close('all')
 # number of variable
 categories=['Upper Left', 'Upper Right', 'Lower Right', 'Lower Left']
 N = len(categories)
@@ -128,7 +128,7 @@ for ax, df in zip(axs, [ok_df, slip_df]):
 style.maximize()
 
 #%%
-plt.close('all')
+#plt.close('all')
 colors = ['tab:blue', 'tab:orange']
 s = 2
 ticks = np.linspace(0,s,7).round(1)#.astype(np.int)
