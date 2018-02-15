@@ -7,7 +7,7 @@ Created on Fri Dec 1 12:15:00 2017
 
 @author: giguerf
 """
-def plotbook(subdir, chlist, tcns=None):
+def plotbook(savedir, chlist, tcns=None):
     """
     Plot THOR-related basic overview plots. All pairs by channels and both
     groups with means/intervals by channels.
@@ -19,12 +19,12 @@ def plotbook(subdir, chlist, tcns=None):
     from PMG.COM import plotstyle as style
 
     readdir = os.fspath('P:/AHEC/SAI/')
-    savedir = os.fspath('P:/AHEC/Plots/')
+#    savedir = os.fspath('P:/AHEC/Plots/')
 
     descriptions = pd.read_excel('P:/AHEC/Descriptions.xlsx', index_col = 0)
     description = descriptions.to_dict()[descriptions.columns[0]]
 
-    time, slipdict, slidedict, okdict, singles, pairs = ob.thor(readdir, tcns)
+    time, slipdict, okdict, singles = ob.thorHDF5(chlist, tcns)
 
     #%% FIGURE 1 - all pairs plotted individually
 
@@ -67,7 +67,7 @@ def plotbook(subdir, chlist, tcns=None):
             ax.legend(loc=4)
 
         plt.tight_layout(rect=[0,0,1,0.92])
-        plt.savefig(savedir+subdir+'All_Pairs_'+channel+'.png', dpi=200)
+        plt.savefig(savedir+'All_Pairs_'+channel+'.png', dpi=200)
         plt.close('all')
 
     #%% FIGURE 2 - Vehicle groups and means
@@ -133,5 +133,5 @@ def plotbook(subdir, chlist, tcns=None):
         plt.legend(loc = 4)
 
         plt.subplots_adjust(top=0.893, bottom=0.060, left=0.048, right=0.974, hspace=0.222, wspace=0.128)
-        plt.savefig(savedir+subdir+'Belt_'+channel+'.png', dpi=200)
+        plt.savefig(savedir+'Belt_'+channel+'.png', dpi=200)
         plt.close('all')

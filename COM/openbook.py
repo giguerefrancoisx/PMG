@@ -190,6 +190,53 @@ def thor(readdir, TCNs=None):
 
     return time, slipdict, slidedict, okdict, singles, pairs
 
+def thorHDF5(chlist, TCNs=None):
+    """
+    Reads all channel workbooks from the THOR directory into dictionaries
+    separated by the selected population group. Also creates a 'time' series
+    and table for each population group
+    """
+    THOR = 'P:/AHEC/DATA/THOR/'
+    time, fulldata = openHDF5(THOR, chlist)
+    slipdict = {}
+    okdict = {}
+    for ch in chlist:
+        chdata = fulldata[ch]
+        if TCNs is None:
+            TCNs = chdata.columns.tolist()
+        singles, _ = lookup_pairs(TCNs, project='THOR') #assign pairs via external function
+
+        if chdata.shape[1] != 1:
+            for tcn in singles.CIBLE.tolist():
+                if tcn not in chdata.columns.tolist():
+                    chdata[tcn] = [float('NaN') for i in range(chdata.shape[0])]
+
+            slips = singles[singles.loc[:,'CBL_BELT']=='SLIP'].CIBLE.tolist()
+            oks = singles[singles.loc[:,'CBL_BELT']=='OK'].CIBLE.tolist()
+
+            slipdict[ch] = chdata[slips]
+            okdict[ch] = chdata[oks]
+
+            stats = {'Mean': slipdict[ch].mean(axis = 1),
+                     'High': slipdict[ch].mean(axis = 1)+2*slipdict[ch].std(axis = 1),
+                     'Low': slipdict[ch].mean(axis = 1)-2*slipdict[ch].std(axis = 1)}
+            stats = pandas.DataFrame(data = stats)
+            slipdict[ch+'_stats'] = stats
+
+            stats = {'Mean': okdict[ch].mean(axis = 1),
+                     'High': okdict[ch].mean(axis = 1)+2*okdict[ch].std(axis = 1),
+                     'Low': okdict[ch].mean(axis = 1)-2*okdict[ch].std(axis = 1)}
+            stats = pandas.DataFrame(data = stats)
+            okdict[ch+'_stats'] = stats
+        else:
+            print('chdata  is blank for :', ch)
+            slipdict[ch] = pandas.DataFrame()
+            okdict[ch] = pandas.DataFrame()
+            slipdict[ch+'_stats'] = pandas.DataFrame(columns = ['Mean', 'High', 'Low'])
+            okdict[ch+'_stats'] = pandas.DataFrame(columns = ['Mean', 'High', 'Low'])
+
+    return time, slipdict, okdict, singles
+
 def gencut(readdir, group=''):
     """
     Reads all channel workbooks from the current directory into dictionaries
@@ -400,9 +447,9 @@ def lookup_pairs(TCNs=None, project=None):
     elif project == 'THOR':
 
         singles = pandas.read_excel('P:/AHEC/thortable.xlsx', sheetname='All')
-        singles = singles.dropna(axis=0, thresh=3).dropna(axis=1, how='all')
+        singles = singles.dropna(axis=0, thresh=5).dropna(axis=1, how='all')
         pairs = pandas.read_excel('P:/AHEC/thortable.xlsx', sheetname='Pairs')
-        pairs = pairs.dropna(axis=0, thresh=3).dropna(axis=1, how='all')
+        pairs = pairs.dropna(axis=0, thresh=5).dropna(axis=1, how='all')
 
         if TCNs is not None:
             singles = singles[singles.loc[:,'CIBLE'].isin(TCNs)]
