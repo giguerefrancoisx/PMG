@@ -35,7 +35,9 @@ def split(table, column, categories=None):
     Returns:
     -------------
     tables : dict
-        Dictionary of tables corresponding to each category
+        Dictionary of tables corresponding to each category. Note: to return individual catgeories' dataframes, append '.values()' to the function call:
+
+        >>> df1, df2, df3 = split(table, column, categories=[1,2,3]).values()
 
     Example:
     -----------

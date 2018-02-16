@@ -12,19 +12,17 @@ def plotbook(savedir, chlist, tcns=None):
     Plot THOR-related basic overview plots. All pairs by channels and both
     groups with means/intervals by channels.
     """
-    import os
     import pandas as pd
     import matplotlib.pyplot as plt
     from PMG.COM import openbook as ob
     from PMG.COM import plotstyle as style
-
-    readdir = os.fspath('P:/AHEC/SAI/')
-#    savedir = os.fspath('P:/AHEC/Plots/')
+    from PMG.COM import data
 
     descriptions = pd.read_excel('P:/AHEC/Descriptions.xlsx', index_col = 0)
     description = descriptions.to_dict()[descriptions.columns[0]]
 
-    time, slipdict, okdict, singles = ob.thorHDF5(chlist, tcns)
+    time, categories = ob.thor(chlist, tcns)
+    slip, ok = categories['SLIP'], categories['OK']
 
     #%% FIGURE 1 - all pairs plotted individually
 
@@ -33,33 +31,27 @@ def plotbook(savedir, chlist, tcns=None):
 #
     plt.close('all')
     for channel in chlist:
-        slip = slipdict[channel]
-        ok = okdict[channel]
-        plotdata = pd.concat([slip, ok], axis=1)
-        plotdata = plotdata.loc[:,tcns] if tcns is not None else plotdata
-        if plotdata.shape[0] == 0:
+        slipdf = slip[channel]
+        okdf = ok[channel]
+        plotdata = pd.concat([slipdf, okdf], axis=1)
+
+        if plotdata.empty:
             continue
         ylim = style.ylim_no_outliers(plotdata)
         ylabel = style.ylabel(channel[12:14], channel[14:15])
 
         r, c = style.sqfactors(len(plotdata.columns.tolist()))
-        fig, axs = style.subplots(r, c, sharex='all', sharey='all', visible=True,
-                                  num='All Pairs: '+channel, figsize=(5*c, 3.125*r))
+        fig, axs = style.subplots(r, c, sharex='all', sharey='all',
+                                  visible=True, num='All Pairs: '+channel)
         fig.suptitle('{ch} - {desc}'.format(ch = channel,
                      desc = description.get(channel, 'Description Unavailable')))
 
-#        data = pd.concat([cib,bel], axis=1)
         for i, tcn in enumerate(plotdata.columns.tolist()):
             ax = axs[i]
-
-#            ax.plot(time, cib.loc[:, cib_tcn], color = 'tab:blue', label = cib_tcn)
-#            ax.plot(time, bel.loc[:, bel_tcn], color = 'tab:green', label = bel_tcn)
             ax.plot(time, plotdata.loc[:, tcn], color = 'tab:green', label = tcn)
             ax.set_xlim(*xlim)
             ax.set_ylim(*ylim)
 
-#            title = '{} vs {}: {} vs {}'.format(cib_tcn, pairs.loc[cib_tcn,'BELIER'],
-#                     pairs.loc[cib_tcn,'CBL_MODELE'], pairs.loc[cib_tcn,'BLR_MODELE'])
             title = tcn
             ax.set_title(title)
             ax.set_ylabel(ylabel)
@@ -74,25 +66,11 @@ def plotbook(savedir, chlist, tcns=None):
 
     plt.close('all')
     for channel in chlist:
-        slip = slipdict[channel]
-        ok = okdict[channel]
-        if tcns is not None:
-            slip = slip.loc[:,tcns].dropna(axis=1)
-            ok = ok.loc[:,tcns].dropna(axis=1)
 
-        stats = {'Mean': slip.mean(axis = 1),
-                 'High': slip.mean(axis = 1)+2*slip.std(axis = 1),
-                 'Low': slip.mean(axis = 1)-2*slip.std(axis = 1)}
-        stats = pd.DataFrame(data = stats)
-        slipstats = stats
+        slipdf, slipstats = slip[channel], data.stats(slip[channel])
+        okdf, okstats = ok[channel], data.stats(ok[channel])
 
-        stats = {'Mean': ok.mean(axis = 1),
-                 'High': ok.mean(axis = 1)+2*ok.std(axis = 1),
-                 'Low': ok.mean(axis = 1)-2*ok.std(axis = 1)}
-        stats = pd.DataFrame(data = stats)
-        okstats = stats
-
-        ylim = style.ylim_no_outliers([slip, ok])
+        ylim = style.ylim_no_outliers([slipdf, okdf])
         ylabel = style.ylabel(channel[12:14], channel[14:15])
 
         fig = plt.figure('Groups: '+channel, figsize=(20, 12.5))
@@ -101,7 +79,7 @@ def plotbook(savedir, chlist, tcns=None):
 
         #FIRST SUBPLOT - 'SLIP' Group full data set
         ax = plt.subplot(2,2,1)
-        plt.plot(time, slip, '.', color = 'tab:blue', markersize=0.5, label = 'n = {}'.format(slip.shape[1]))
+        plt.plot(time, slipdf, '.', color = 'tab:blue', markersize=0.5, label = 'n = {}'.format(slipdf.shape[1]))
         plt.xlim(*xlim)
         ax.set_ylim(*ylim)
         plt.title('Slipping Belts')
@@ -111,7 +89,7 @@ def plotbook(savedir, chlist, tcns=None):
 
         #THIRD SUBPLOT - 'OK' Group full data set
         plt.subplot(2,2,3, sharey = ax)
-        plt.plot(time, ok, '.', color = 'tab:orange', markersize=0.5, label = 'n = {}'.format(ok.shape[1]))
+        plt.plot(time, okdf, '.', color = 'tab:orange', markersize=0.5, label = 'n = {}'.format(okdf.shape[1]))
         plt.xlim(*xlim)
         ax.set_ylim(*ylim)
         plt.title('Ok Belts')
@@ -120,10 +98,12 @@ def plotbook(savedir, chlist, tcns=None):
         style.legend(ax=plt.gca(), loc=4)
 
         #FOURTH SUBPLOT - 'CIBLE' vs 'BELIER' Groups (mean and intervals)
-        plt.subplot(2,2,2)
-        plt.plot(time, slipstats['Mean'], color = 'tab:blue', label = 'Mean (Slip), n = {}'.format(slip.shape[1]))
+        plt.subplot(2,2,2, sharey = ax)
+        plt.plot(time, slipstats['Mean'], color = 'tab:blue', label = 'Mean (Slip), n = {}'.format(slipdf.shape[1]))
+        plt.plot(time, slipstats['Mean-between'], color = 'tab:purple', label = 'Mean-between (Slip), n = {}'.format(slipdf.shape[1]))
         plt.fill_between(time, slipstats['High'], slipstats['Low'], color = 'tab:blue', alpha = 0.25, label = 'Intervals (Slip)')
-        plt.plot(time, okstats['Mean'], color = 'tab:orange', label = 'Mean (Ok), n = {}'.format(ok.shape[1]))
+        plt.plot(time, okstats['Mean'], color = 'tab:orange', label = 'Mean (Ok), n = {}'.format(okdf.shape[1]))
+        plt.plot(time, okstats['Mean-between'], color = 'tab:red', label = 'Mean-between (Ok), n = {}'.format(okdf.shape[1]))
         plt.fill_between(time, okstats['High'], okstats['Low'], color = 'tab:orange', alpha = 0.25, label = 'Intervals (Ok)')
         plt.xlim(*xlim)
         ax.set_ylim(*ylim)

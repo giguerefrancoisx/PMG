@@ -6,6 +6,7 @@ Created on Fri Nov  3 13:03:35 2017
 """
 import os
 import pandas
+import PMG.COM.table as tb
 
 def openbook(directory, channel=None):
     """
@@ -15,6 +16,7 @@ def openbook(directory, channel=None):
     Reads all channel workbooks from the current directory into a single
     dictionary. Also creates a 'time' series
     """
+    raise DeprecationWarning('All openbook functions not using HDF5 stores are no longer available.')
     if channel is not None:
         chdata = pandas.read_csv(directory+channel+'.csv')
         time = chdata.iloc[:4100,0]
@@ -82,6 +84,7 @@ def cibbel(readdir):
     separated by the selected population group. Also creates a 'time' series
     and returns pairs table
     """
+    raise DeprecationWarning('All openbook functions not using HDF5 stores are no longer available.')
     cibdict = {}
     beldict = {}
     for filename in os.listdir(readdir):
@@ -124,118 +127,37 @@ def cibbel(readdir):
 
     return time, cibdict, beldict, pairs
 
-def thor(readdir, TCNs=None):
-    """
-    Reads all channel workbooks from the current directory into dictionaries
-    separated by the selected population group. Also creates a 'time' series
-    and table for each population group
-    """
-    slipdict = {}
-    slidedict = {}
-    okdict = {}
-    for filename in os.listdir(readdir):
-        ch = filename[:16]
-        chdata = pandas.read_csv(readdir+filename)
-        if TCNs is None:
-            TCNs = chdata.columns.tolist()
-        singles, pairs = lookup_pairs(TCNs, project='THOR') #assign pairs via external function
-
-        if chdata.shape[1] != 1:
-            for tcn in singles.CIBLE.tolist():#+pairs.BELIER.tolist()+pairs.CIBLE.tolist():
-                if tcn not in chdata.columns.tolist():
-                    chdata[tcn] = [float('NaN') for i in range(chdata.shape[0])]
-
-            slips = (singles[singles.loc[:,'CBL_BELT']=='SLIP'].CIBLE.tolist())#+
-#                     pairs[pairs.loc[:,'CBL_BELT']=='SLIP'].CIBLE.tolist()+
-#                     pairs[pairs.loc[:,'BLR_BELT']=='SLIP'].BELIER.tolist())
-#            slides = (singles[singles.loc[:,'CBL_BELT']=='SLIDE'].CIBLE.tolist()+
-#                      pairs[pairs.loc[:,'CBL_BELT']=='SLIDE'].CIBLE.tolist()+
-#                      pairs[pairs.loc[:,'BLR_BELT']=='SLIDE'].BELIER.tolist())
-            oks = (singles[singles.loc[:,'CBL_BELT']=='OK'].CIBLE.tolist())#+
-#                   pairs[pairs.loc[:,'CBL_BELT']=='OK'].CIBLE.tolist()+
-#                   pairs[pairs.loc[:,'BLR_BELT']=='OK'].BELIER.tolist())
-
-            slipdict[ch] = chdata[slips]#cibbel.loc[:, slips].dropna(axis=1)
-#            slidedict[ch] = chdata[slides]#cibbel.loc[:, slides].dropna(axis=1)
-            okdict[ch] = chdata[oks]#cibbel.loc[:, oks].dropna(axis=1)
-
-            stats = {'Mean': slipdict[ch].mean(axis = 1),
-                     'High': slipdict[ch].mean(axis = 1)+2*slipdict[ch].std(axis = 1),
-                     'Low': slipdict[ch].mean(axis = 1)-2*slipdict[ch].std(axis = 1)}
-            stats = pandas.DataFrame(data = stats)
-            slipdict[ch+'_stats'] = stats
-
-#            stats = {'Mean': slidedict[ch].mean(axis = 1),
-#                     'High': slidedict[ch].mean(axis = 1)+2*slidedict[ch].std(axis = 1),
-#                     'Low': slidedict[ch].mean(axis = 1)-2*slidedict[ch].std(axis = 1)}
-#            stats = pandas.DataFrame(data = stats)
-#            slidedict[ch+'_stats'] = stats
-
-            stats = {'Mean': okdict[ch].mean(axis = 1),
-                     'High': okdict[ch].mean(axis = 1)+2*okdict[ch].std(axis = 1),
-                     'Low': okdict[ch].mean(axis = 1)-2*okdict[ch].std(axis = 1)}
-            stats = pandas.DataFrame(data = stats)
-            okdict[ch+'_stats'] = stats
-        else:
-            print('chdata  is blank for :', filename)
-            slipdict[ch] = pandas.DataFrame()
-#            slidedict[ch] = pandas.DataFrame()
-            okdict[ch] = pandas.DataFrame()
-            slipdict[ch+'_stats'] = pandas.DataFrame(columns = ['Mean', 'High', 'Low'])
-#            slidedict[ch+'_stats'] = pandas.DataFrame(columns = ['Mean', 'High', 'Low'])
-            okdict[ch+'_stats'] = pandas.DataFrame(columns = ['Mean', 'High', 'Low'])
-
-    time = chdata.iloc[:4100,0]
-    time.name = 'Time'
-
-    return time, slipdict, slidedict, okdict, singles, pairs
-
-def thorHDF5(chlist, TCNs=None):
-    """
-    Reads all channel workbooks from the THOR directory into dictionaries
-    separated by the selected population group. Also creates a 'time' series
-    and table for each population group
-    """
+def thor(chlist, tcns=None):
+    """Splits the data from the THOR project into slip and no slip tests."""
     THOR = 'P:/AHEC/DATA/THOR/'
-    time, fulldata = openHDF5(THOR, chlist)
-    slipdict = {}
-    okdict = {}
-    for ch in chlist:
-        chdata = fulldata[ch]
-        if TCNs is None:
-            TCNs = chdata.columns.tolist()
-        singles, _ = lookup_pairs(TCNs, project='THOR') #assign pairs via external function
+    categories = ['SLIP','OK']
+    column = 'CBL_BELT'
+    return _categorize(THOR, 'THOR', chlist, tcns, column, categories)
 
-        if chdata.shape[1] != 1:
-            for tcn in singles.CIBLE.tolist():
-                if tcn not in chdata.columns.tolist():
-                    chdata[tcn] = [float('NaN') for i in range(chdata.shape[0])]
+def _categorize(path, project, chlist, tcns, column, categories):
+    """Don't call this directly, instead call the desired function (eg: thor())
 
-            slips = singles[singles.loc[:,'CBL_BELT']=='SLIP'].CIBLE.tolist()
-            oks = singles[singles.loc[:,'CBL_BELT']=='OK'].CIBLE.tolist()
+    Opens and splits the project data into the requested categories. See
+    PMG.COM.table.get(), split() and this file's openHDF5() for parameter
+    explanations.
+    """
+    table = tb.get(project)
+    time, fulldata = openHDF5(path, chlist)
+    split_table = tb.split(table, column, categories)
+    category_dict = {}
+    for category in categories:
+        category_dict[str(category)] = {}
+        table = split_table[category]
+        if tcns is not None:
+            table = table[table.CIBLE.isin(tcns)]
+        category_tcns = table.CIBLE.tolist()
 
-            slipdict[ch] = chdata[slips]
-            okdict[ch] = chdata[oks]
+        for ch in chlist:
+            chdata = fulldata[ch]
+            df = chdata.loc[:, category_tcns].dropna(axis=1)
+            category_dict[str(category)][ch] = df
 
-            stats = {'Mean': slipdict[ch].mean(axis = 1),
-                     'High': slipdict[ch].mean(axis = 1)+2*slipdict[ch].std(axis = 1),
-                     'Low': slipdict[ch].mean(axis = 1)-2*slipdict[ch].std(axis = 1)}
-            stats = pandas.DataFrame(data = stats)
-            slipdict[ch+'_stats'] = stats
-
-            stats = {'Mean': okdict[ch].mean(axis = 1),
-                     'High': okdict[ch].mean(axis = 1)+2*okdict[ch].std(axis = 1),
-                     'Low': okdict[ch].mean(axis = 1)-2*okdict[ch].std(axis = 1)}
-            stats = pandas.DataFrame(data = stats)
-            okdict[ch+'_stats'] = stats
-        else:
-            print('chdata  is blank for :', ch)
-            slipdict[ch] = pandas.DataFrame()
-            okdict[ch] = pandas.DataFrame()
-            slipdict[ch+'_stats'] = pandas.DataFrame(columns = ['Mean', 'High', 'Low'])
-            okdict[ch+'_stats'] = pandas.DataFrame(columns = ['Mean', 'High', 'Low'])
-
-    return time, slipdict, okdict, singles
+    return time, category_dict
 
 def gencut(readdir, group=''):
     """
@@ -243,6 +165,7 @@ def gencut(readdir, group=''):
     separated by the selected population group. Also creates a 'time' series
     and table for each population group
     """
+    raise DeprecationWarning('All openbook functions not using HDF5 stores are no longer available.')
     gendict = {}
     cutdict = {}
     for filename in os.listdir(readdir):
@@ -279,6 +202,7 @@ def oldnew(readdir):
     Reads all channel workbooks from the current directory into dictionaries
     separated by 'old' and 'new'. Similar to cib/bel for AHEC.
     """
+    raise DeprecationWarning('All openbook functions not using HDF5 stores are no longer available.')
     olddict = {}
     newdict = {}
     missing = []
@@ -319,6 +243,7 @@ def populations(readdir, table, column='SUBSET'):
     Must have columns Cible and Belier
     Must pass column with the subset types.
     """
+    raise DeprecationWarning('All openbook functions not using HDF5 stores are no longer available.')
     popdict = {}
     missing = []
     for filename in os.listdir(readdir):
@@ -354,6 +279,7 @@ def grids(fulldata, chlist):
     Separates the list of tests by speed and collision type (grids). Returns
     a dictionary of these grids by group.
     """
+    raise DeprecationWarning('All openbook functions not using HDF5 stores are no longer available.')
     groupdict = {}
     for group in ['A', 'B', 'C', 'D', 'E','']:
         groupdict[group] = {}
@@ -381,6 +307,7 @@ def popgrids(fulldata, chlist):
     Separates the list of tests by speed and collision type (grids). Returns
     a dictionary of these grids by group.
     """
+    raise DeprecationWarning('All openbook functions not using HDF5 stores are no longer available.')
     groupdict = {}
     for group in ['A','B','C','UAS','']:
         groupdict[group] = {}
@@ -412,6 +339,7 @@ def lookup_pop(TCNs, group):
     Returns two DataFrames with information gathered from the boostertable,
     separated by population group.
     """
+    raise DeprecationWarning('All openbook functions not using HDF5 stores are no longer available.')
     table = pandas.read_excel('P:/BOOSTER/boostertable.xlsx')
     table = table[table.loc[:,['TC_Vehicule']].isin(TCNs).any(axis=1)]
     population = table.loc[:,['TC_Vehicule', 'Type', 'Vitesse',
@@ -430,6 +358,7 @@ def lookup_pairs(TCNs=None, project=None):
     Returns a DataFrame with information gathered from the project's table.
     Automatically pairs the TCNs selected.
     """
+    raise DeprecationWarning('All openbook functions not using HDF5 stores are no longer available.')
     if project == 'sled':
         table = pandas.read_excel('P:/SLED/sledtable.xlsx')
         table = table.dropna(axis=0, how='all').dropna(axis=1, thresh=2)

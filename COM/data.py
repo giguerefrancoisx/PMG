@@ -147,6 +147,31 @@ def find_values(data, time=None, scale=1, offset=0, minor=False, fun=firstsmalle
 
     return values, times
 
+def stats(df, old_way=False):
+    def band(row, a, w=0):
+        """w = window (half-range), a = % band (0 to 1)"""
+        region = df.iloc[max(0,row.name-w):min(len(df),row.name+w)+1]
+        region = np.sort(np.array(region).reshape(region.size))
+        return region[min(int(a*region.size),int(region.size)-1)]
+
+    if old_way:
+        stats = {'Mean': df.mean(axis = 1),
+                 'High': df.mean(axis = 1)+2*df.std(axis = 1),
+                 'Low' : df.mean(axis = 1)-2*df.std(axis = 1)}
+    else:
+        alpha = 0.05 #0.05 = 95% confidence
+        stats = {'Mean': df.mean(axis=1),
+                 'High': df.apply(lambda row: band(row, 1-alpha/2, w=50), axis=1),
+                 'Low' : df.apply(lambda row: band(row, alpha/2, w=50), axis=1)}
+        over = df.T[(df.T>stats['High']*1.1).sum(axis=1)>30].T #20 = threshold for disqualification (spent more than 2.0 ms above 'High')
+        under = df.T[(df.T<stats['Low']*1.1).sum(axis=1)>30].T
+        between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
+        stats['Mean-between'] = between.mean(axis=1)
+
+        stats = pd.DataFrame(data=stats)
+
+    return stats
+
 #import matplotlib.pyplot as plt
 #plt.close('all')
 #values, times = find_values_old(data, time, scale=0, offset=-4.66, minor=False)

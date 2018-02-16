@@ -169,7 +169,7 @@ def sqfactors(n, axratio=1, figratio=1.6):
 
     return factors
 
-def subplots(r, c, sharex='none', sharey='none', visible=True, **kwargs):
+def subplots(r, c, sharex='none', sharey='none', visible=True, figsize=None, **kwargs):
     """
     Input
         r, c: number of rows and columns in subplot grid
@@ -186,12 +186,15 @@ def subplots(r, c, sharex='none', sharey='none', visible=True, **kwargs):
     Returns
         fig, axs
     """
-    axs = []
+    if figsize is None:
+        figsize = (5*c, 3.125*r)
+#    axs = [] #Why is this here?
 
     if any([sharex == 'all', sharex == 'row', sharex == 'col',
             sharex == 'none']) and any([sharey == 'all', sharey == 'row',
                                         sharey == 'col', sharey == 'none']):
-        fig, axs = plt.subplots(r,c, sharex=sharex, sharey=sharey, squeeze=False, **kwargs)
+        fig, axs = plt.subplots(r,c, sharex=sharex, sharey=sharey,
+                                squeeze=False, figsize=figsize, **kwargs)
         axs = axs.reshape(r*c)
 
         if visible:
@@ -240,7 +243,7 @@ def subplots(r, c, sharex='none', sharey='none', visible=True, **kwargs):
                 print('x (loc, value, assigned): ', [(i+1, sharex[i], sharex[sharex[i]-1]) for i in range(len(sharex)) if sharex[i]!=sharex[sharex[i]-1]])
                 print('y (loc, value, assigned): ', [(i+1, sharey[i], sharey[sharey[i]-1]) for i in range(len(sharey)) if sharey[i]!=sharey[sharey[i]-1]])
         else:
-            fig = plt.figure(**kwargs) #num = 'title', figsize = (x,y)
+            fig = plt.figure(figsize=figsize, **kwargs) #num = 'title', figsize = (x,y)
             for i, (x, y) in enumerate(zip(sharex,sharey)):
 
                 shx = (None if x-1 == i else axs[x-1])
