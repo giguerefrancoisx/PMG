@@ -35,6 +35,7 @@ def process(raw, norm=True, smooth=True, scale=True):
         data = (data - data.mean())/data.std()
     if smooth:
         data = data.rolling(window=30, center=True, min_periods=0).mean()
+        #TODO: data.ewm()
     if scale:
         sign = not positive_max(data)
         data = (data - data.min().min())/(data.max().max() - data.min().min())-int(sign)
@@ -147,30 +148,95 @@ def find_values(data, time=None, scale=1, offset=0, minor=False, fun=firstsmalle
 
     return values, times
 
-def stats(df, old_way=False):
-    def band(row, a, w=0):
-        """w = window (half-range), a = % band (0 to 1)"""
-        region = df.iloc[max(0,row.name-w):min(len(df),row.name+w)+1]
-        region = np.sort(np.array(region).reshape(region.size))
-        return region[min(int(a*region.size),int(region.size)-1)]
+#def stats(df, old_way=False, band1=False, minmax=False):
+#    import scipy.stats
+#
+#    def band(row, alpha, w=0):
+#        """w = window (half-range), a = % band (0 to 1)"""
+#        region = df.iloc[max(0,row.name-w):min(len(df),row.name+w)+1]
+#        N = region.size
+#        region = np.sort(np.array(region).reshape(N))
+#        l = max(int(alpha*N), 0)
+#        u = min(int((1-alpha)*N), int(N)-1)
+#        return region[l], region[u]
+#
+#    def band2(row, alpha, gamma, w):
+#        n=len(row)
+#        um = int(scipy.stats.binom.ppf(1-alpha, p=gamma, n=n))
+#        up = n+1 if (n-um)%2==1 else n
+#        u, l = int((up+um)/2)-1, int((up-um)/2)-1
+#        region = df.iloc[max(0,row.name-w):min(len(df),row.name+w)+1]
+#        region = np.sort(np.array(region).reshape(region.size))
+#        return region[l], region[u]
+#
+#    df = df.dropna(axis=1)
+#    if old_way:
+#        stats = {'Mean': df.mean(axis=1),
+#                 'Low' : df.mean(axis=1)-1.96*df.std(axis=1),
+#                 'High': df.mean(axis=1)+1.96*df.std(axis=1), #1.96 = 95% for normal distribution
+#                 'Max' : df.max(axis=1),
+#                 'Min' : df.min(axis=1)}
+#    elif minmax:
+#        stats = {'Mean': df.mean(axis=1),
+#                 'Low' : df.min(axis=1),
+#                 'High': df.max(axis=1)} #1.96 = 95% for normal distribution
+#    else:
+#        alpha = 0.05 #0.05 = 95% confidence
+#        gamma = 0.90 #0.95 = 95% coverage
+#        if band1:
+#            highlow = df.apply(lambda row: band(row, alpha, w=0), axis=1)
+#        else:
+#            highlow = df.apply(lambda row: band2(row, alpha, gamma, w=0), axis=1)
+#        highlow = list(zip(*highlow))
+#        stats = {'Mean': df.mean(axis=1),
+#                 'Low': pd.Series(highlow[0], index=df.index),
+#                 'High' : pd.Series(highlow[1], index=df.index)}
+#        over = df.T[(df.T>stats['High']*1.1).sum(axis=1)>30].T #20 = threshold for disqualification (spent more than 2.0 ms above 'High')
+#        under = df.T[(df.T<stats['Low']*1.1).sum(axis=1)>30].T
+#        between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
+#        stats['Mean-between'] = between.mean(axis=1)
+#
+#    stats = pd.DataFrame(data=stats)#.rolling(window=100, center=True, min_periods=0)
+#
+#    return stats
 
-    if old_way:
-        stats = {'Mean': df.mean(axis = 1),
-                 'High': df.mean(axis = 1)+2*df.std(axis = 1),
-                 'Low' : df.mean(axis = 1)-2*df.std(axis = 1)}
-    else:
-        alpha = 0.05 #0.05 = 95% confidence
-        stats = {'Mean': df.mean(axis=1),
-                 'High': df.apply(lambda row: band(row, 1-alpha/2, w=50), axis=1),
-                 'Low' : df.apply(lambda row: band(row, alpha/2, w=50), axis=1)}
-        over = df.T[(df.T>stats['High']*1.1).sum(axis=1)>30].T #20 = threshold for disqualification (spent more than 2.0 ms above 'High')
-        under = df.T[(df.T<stats['Low']*1.1).sum(axis=1)>30].T
-        between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
-        stats['Mean-between'] = between.mean(axis=1)
+def stats(df):
+    alpha = 0.05 #0.05 = 95% coverage
 
-        stats = pd.DataFrame(data=stats)
+    df = df.dropna(axis=1)
+    df2 = df.apply(lambda row: sorted(row), axis=1)
+    df3 = df2.rolling(window=100, center=True, min_periods=0).mean()
+    N = df.shape[1]
+
+    stats = {'Mean': df.mean(axis=1),
+             'Low': df3.iloc[:, np.ceil(N*alpha/2).astype(int)],
+             'High' : df3.iloc[:, np.floor(N*(1-alpha/2)).astype(int)]}
+
+    over_thresh = sorted((df.T>stats['High']*1).sum(axis=1))[N-N//10] #remove top 10% of data by time spent outside bounds
+    under_thresh = sorted((df.T<stats['Low']*1).sum(axis=1))[N-N//10]
+    over = df.T[(df.T>stats['High']*1).sum(axis=1)>=over_thresh].T
+    under = df.T[(df.T<stats['Low']*1).sum(axis=1)>=under_thresh].T
+
+    between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
+    stats['Mean-between'] = between.mean(axis=1)
+
+    stats = pd.DataFrame(data=stats)#.rolling(window=100, center=True, min_periods=0)
 
     return stats
+### 10ms rolling window of 95% data
+#alpha = 0.05
+#df2 = df.apply(lambda row: sorted(row), axis=1)
+#N = df.shape[1]
+#plt.figure()
+#plt.plot(df.mean(axis=1))
+#plt.plot(df2.rolling(window=100, center=True, min_periods=0).mean(), alpha=0.2)
+#plt.plot(df2.iloc[:, int(N*alpha/2)].rolling(window=100, center=True, min_periods=0).mean())
+#plt.plot(df2.iloc[:, int(N*(1-alpha/2))].rolling(window=100, center=True, min_periods=0).mean())
+#plt.figure()
+#plt.plot(df.mean(axis=1))
+#plt.plot(df, alpha=0.2)
+#plt.plot(df2.iloc[:, int(N*alpha/2)].rolling(window=100, center=True, min_periods=0).mean())
+#plt.plot(df2.iloc[:, int(N*(1-alpha/2))].rolling(window=100, center=True, min_periods=0).mean())
 
 #import matplotlib.pyplot as plt
 #plt.close('all')
