@@ -13,12 +13,12 @@ import PMG.COM.plotstyle as style
 import PMG.COM.table as tb
 
 THOR = os.fspath('P:/AHEC/Data/THOR/')
-chlist = ['11NECKLO00THFOXA', '11NECKLO00THFOYA', '11PELV0000THACXA', '11FEMRLE00THFOZB']
+chlist = ['11NECKLO00THFOXA', '11CHSTLEUPTHDSXB', '11PELV0000THACXA', '11FEMRLE00THFOZB']
 #chlist = ['11CHST0000THACXC', '11CHSTLEUPTHDSXB', '11CLAVLEINTHFOZA', '11CLAVRIINTHFOZA']
 
 time, fulldata = openHDF5(THOR, chlist)
 
-ok, slip = tb.split(tb.get('THOR'), column='CBL_BELT', categories=['OK','SLIP']).values()
+ok, slip = tb.split(tb.get('THOR'), 'CBL_BELT', ['OK','SLIP']).values()
 slip = slip[~slip.T1.isnull() & ~slip.T1.isin(['?'])]
 
 bin1 = slip[(0.060<=slip.T1) & (slip.T1<0.075)]

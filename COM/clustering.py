@@ -240,7 +240,7 @@ def cluster(channel, sl, data, project, output, N=6, tcns=None, norm=True,
 #    from GitHub.COM.data import import_SAI, process
     t, raw = import_data(data, channel, tcns, sl)
     labels, lbd = make_labels(raw, project, tcns)
-    datadf = process(raw, norm, smooth)
+    datadf = process(raw, norm, smooth, scale=True)
     X = np.array(datadf.transpose())
 
     m,_ = X.shape
@@ -279,7 +279,7 @@ if __name__ == '__main__':
 #              '11CHST0000H3ACXC', '11CHST0000THACXC', '11NECKLO00THFOXA',
 #              '11PELV0000H3ACXA', '11PELV0000THACXA']
 #    channel = chlist[7]
-    channel = '11FEMRLE00THFOZB'
+    channel = '10CVEHCG0000ACXD'
     sl = slice(100,1600)
     data = os.fspath('P:/AHEC/DATA/THOR/')
     project = 'THOR'
@@ -290,12 +290,15 @@ if __name__ == '__main__':
 #            'TC14-180', 'TC17-211', 'TC16-129', 'TC17-025', 'TC17-208']
     table = pd.read_excel('P:/AHEC/thortable.xlsx', sheetname='All')
     tcns = table[table['CBL_BELT'].isin(['SLIP','OK']) & table['TYPE'].isin(['Frontale/Véhicule'])]['CIBLE'].tolist()
+#    import PMG.COM.table as tb
+#    slip, ok = tb.tcns(tb.split(tb.get(project), 'CBL_BELT', ['SLIP','OK']))
+#    tcns = slip+ok
 
 #    tcns=None
 
     clusters, *data = cluster(channel, sl, data, project, output, N=4, tcns=tcns,
-                       norm=False, smooth=True, plot_all=True, plot_data=True,
-                       matrix=False, tag='FEMRL-n')
+                       norm=True, smooth=True, plot_all=True, plot_data=True,
+                       matrix=False, tag='VCG')
 
 #%% Time stuff
 #import time as timer

@@ -7,8 +7,8 @@ Created on Fri Feb  2 10:33:47 2018
 import os
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from PMG.COM.openbook import openHDF5
-from PMG.COM.outliers import check_and_clean, clean_outliers
 
 def import_data(directory, channel, tcns=None, sl=slice(None), check=True):
     """Import a channel's dataframe, cleaned of outliers. Optionally filter by
@@ -65,34 +65,9 @@ def firstsmallest(arr):
 
 def find_peaks(data, time=None, minor=False):
         return find_values(data, time, minor=minor, fun='min')
-#    data = data.dropna(axis=1)
-#    if time is None:
-#        time = pd.Series(range(len(data)))
-#    positive = positive_max(data) if (not minor) else (not positive_max(data))
-#    peaks = data.max() if positive else data.min()
-#    indices = data.idxmax() if positive else data.idxmin()
-#    times = indices.apply(lambda i: time[int(i)])
-#
-#    return peaks, times
 
 def find_values_old(data, time=None, scale=1, offset=0, minor=False):
         return find_values(data, time, scale, offset, minor, 'min')
-#
-#    data = data.dropna(axis=1)
-#    if time is None:
-#        time = pd.Series(range(len(data)))
-#
-#    positive = positive_max(data) if (not minor) else (not positive_max(data))
-#    peaks = data.max() if positive else data.min()
-#    values = peaks*scale+offset
-#
-#    stop = data.idxmax().max() if positive else data.idxmin().max()
-#    diff = (data-values).iloc[:stop]
-#    indices = diff.abs().idxmin()
-#
-#    times = indices.apply(lambda i: time[int(i)])
-#
-#    return values, times
 
 def find_values(data, time=None, scale=1, offset=0, minor=False, fun=firstsmallest):
     """
@@ -128,6 +103,8 @@ def find_values(data, time=None, scale=1, offset=0, minor=False, fun=firstsmalle
         It does not return errors for values not in data.
         It searches only in the region before the peak value for each trace
     """
+    if isinstance(data, pd.Series):
+        data = pd.DataFrame(data)
     dropped = pd.concat([data, data.dropna(axis=1)], axis=1).T.drop_duplicates(keep=False).T
     if not dropped.empty:
         data = data.dropna(axis=1)
@@ -148,57 +125,78 @@ def find_values(data, time=None, scale=1, offset=0, minor=False, fun=firstsmalle
 
     return values, times
 
-#def stats(df, old_way=False, band1=False, minmax=False):
-#    import scipy.stats
-#
-#    def band(row, alpha, w=0):
-#        """w = window (half-range), a = % band (0 to 1)"""
-#        region = df.iloc[max(0,row.name-w):min(len(df),row.name+w)+1]
-#        N = region.size
-#        region = np.sort(np.array(region).reshape(N))
-#        l = max(int(alpha*N), 0)
-#        u = min(int((1-alpha)*N), int(N)-1)
-#        return region[l], region[u]
-#
-#    def band2(row, alpha, gamma, w):
-#        n=len(row)
-#        um = int(scipy.stats.binom.ppf(1-alpha, p=gamma, n=n))
-#        up = n+1 if (n-um)%2==1 else n
-#        u, l = int((up+um)/2)-1, int((up-um)/2)-1
-#        region = df.iloc[max(0,row.name-w):min(len(df),row.name+w)+1]
-#        region = np.sort(np.array(region).reshape(region.size))
-#        return region[l], region[u]
-#
-#    df = df.dropna(axis=1)
-#    if old_way:
-#        stats = {'Mean': df.mean(axis=1),
-#                 'Low' : df.mean(axis=1)-1.96*df.std(axis=1),
-#                 'High': df.mean(axis=1)+1.96*df.std(axis=1), #1.96 = 95% for normal distribution
-#                 'Max' : df.max(axis=1),
-#                 'Min' : df.min(axis=1)}
-#    elif minmax:
-#        stats = {'Mean': df.mean(axis=1),
-#                 'Low' : df.min(axis=1),
-#                 'High': df.max(axis=1)} #1.96 = 95% for normal distribution
-#    else:
-#        alpha = 0.05 #0.05 = 95% confidence
-#        gamma = 0.90 #0.95 = 95% coverage
-#        if band1:
-#            highlow = df.apply(lambda row: band(row, alpha, w=0), axis=1)
-#        else:
-#            highlow = df.apply(lambda row: band2(row, alpha, gamma, w=0), axis=1)
-#        highlow = list(zip(*highlow))
-#        stats = {'Mean': df.mean(axis=1),
-#                 'Low': pd.Series(highlow[0], index=df.index),
-#                 'High' : pd.Series(highlow[1], index=df.index)}
-#        over = df.T[(df.T>stats['High']*1.1).sum(axis=1)>30].T #20 = threshold for disqualification (spent more than 2.0 ms above 'High')
-#        under = df.T[(df.T<stats['Low']*1.1).sum(axis=1)>30].T
-#        between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
-#        stats['Mean-between'] = between.mean(axis=1)
-#
-#    stats = pd.DataFrame(data=stats)#.rolling(window=100, center=True, min_periods=0)
-#
-#    return stats
+def clean_outliers(data, returning):
+    """Returns either the input data after dropping outliers, or the minimum
+    and maximum of that data.
+
+    Inputs:
+        data: You may pass a dataframe or list of dataframes to evaluate.
+
+        returning: either 'data' or 'limits'
+    """
+    output = None
+    if isinstance(data, list):
+        data = pd.concat(data, axis=1)
+    data = data.T[data.any()].T
+
+    maxlist = data.max()
+    maxlist.name = 'max'
+    maxlist = maxlist.sort_values(ascending=False).reset_index()
+    above_average = maxlist.loc[0,'max'] > 6*maxlist.loc[1:,'max'].mean()
+    significant = maxlist.loc[0,'max'] > maxlist.loc[1,'max']+1
+    if above_average and significant:
+        tcn = maxlist.loc[0,'index']
+        ymax = maxlist.loc[1,'max']
+        output = clean_outliers(data.drop(tcn, axis=1), returning)
+    else:
+        ymax = maxlist.loc[0,'max']
+
+    minlist = data.min()
+    minlist.name = 'min'
+    minlist = minlist.sort_values(ascending=True).reset_index()
+    above_average = minlist.loc[0,'min'] < 6*minlist.loc[1:,'min'].mean()
+    significant = minlist.loc[0,'min'] < minlist.loc[1,'min']-1
+    if above_average and significant:
+        tcn = minlist.loc[0,'index']
+        ymin = minlist.loc[1,'min']
+        output = clean_outliers(data.drop(tcn, axis=1), returning)
+    else:
+        ymin = minlist.loc[0,'min']
+
+    if returning == 'limits':
+        if output is not None:
+            ymin, ymax = output
+        return ymin, ymax
+    if returning == 'data':
+        if output is not None:
+            data = output
+        return data
+
+def check_and_clean(raw):
+    """Check thats the data does not contain outliers as found by
+    clean_outliers(). Prompts the user for whether a plot highlighting the
+    outliers should be shown. Options are to retain or discard the outliers.
+    """
+    raw = raw.T[raw.any()].T #filter out bad/missing traces
+    clean = clean_outliers(raw, 'data')
+    outliers = pd.concat([raw, clean], axis=1).T.drop_duplicates(keep=False).T
+
+    if not outliers.empty:
+        action = input("Outliers have been detected.\nview: 'y' \ndiscard: any\nretain: 'keep'\n>>>")
+        if action == 'y':
+            plt.figure()
+            plt.plot(clean, alpha=0.25)
+            plt.plot(outliers)
+            plt.waitforbuttonpress()
+            plt.close('all')
+            action = input("discard: any\nretain: 'keep'\n>>>")
+
+        if action == 'keep':
+            clean = raw
+        else:
+            print('outlier(s) ignored: '+', '.join(outliers.columns.tolist())+'\n')
+
+    return clean
 
 def stats(df):
     alpha = 0.05 #0.05 = 95% coverage
@@ -210,7 +208,7 @@ def stats(df):
 
     stats = {'Mean': df.mean(axis=1),
              'Low': df3.iloc[:, np.ceil(N*alpha/2).astype(int)],
-             'High' : df3.iloc[:, np.floor(N*(1-alpha/2)).astype(int)]}
+             'High' : df3.iloc[:, np.floor(N*(1-alpha/2)).astype(int)-1]}
 
     over_thresh = sorted((df.T>stats['High']*1).sum(axis=1))[N-N//10] #remove top 10% of data by time spent outside bounds
     under_thresh = sorted((df.T<stats['Low']*1).sum(axis=1))[N-N//10]
@@ -223,6 +221,7 @@ def stats(df):
     stats = pd.DataFrame(data=stats)#.rolling(window=100, center=True, min_periods=0)
 
     return stats
+
 ### 10ms rolling window of 95% data
 #alpha = 0.05
 #df2 = df.apply(lambda row: sorted(row), axis=1)
@@ -237,6 +236,50 @@ def stats(df):
 #plt.plot(df, alpha=0.2)
 #plt.plot(df2.iloc[:, int(N*alpha/2)].rolling(window=100, center=True, min_periods=0).mean())
 #plt.plot(df2.iloc[:, int(N*(1-alpha/2))].rolling(window=100, center=True, min_periods=0).mean())
+
+#import sklearn.mixture
+#import scipy.stats
+#def band(row):
+#    #row = df.iloc[333]
+#    alpha = 0.05
+#    row2 = np.array(row).reshape(-1,1)
+#    gm = sklearn.mixture.GaussianMixture(2)
+#    gm.fit(row2)
+#    fit1 = gm.weights_[0],gm.means_[0][0],gm.covariances_[0][0][0]
+#    fit2 = gm.weights_[1],gm.means_[1][0],gm.covariances_[1][0][0]
+#    x = np.linspace(row.min(),row.max(),1000)
+#    y1 = scipy.stats.norm.pdf(x, loc=fit1[1], scale=fit1[2])
+#    y2 = scipy.stats.norm.pdf(x, loc=fit2[1], scale=fit2[2])
+#    y = fit1[0]*y1+fit2[0]*y2
+#    cdf = np.cumsum(y)/np.cumsum(y)[-1]
+#    lower = x[np.argmin(np.abs(cdf-alpha))]
+#    mean = x[np.argmin(np.abs(cdf-0.5))]
+#    upper = x[np.argmin(np.abs(cdf-(1-alpha)))]
+#    return lower, mean, upper
+#
+#def stats2(df):
+##    alpha = 0.05 #0.05 = 95% coverage
+#
+#    df = df.dropna(axis=1)
+#    res = df.apply(lambda row: band(row), axis=1)
+#    stats = pd.DataFrame(np.array(list((zip(*res)))).T, columns = ['Low', 'Mean', 'High'])
+#    N = df.shape[1]
+#
+##    stats = {'Mean': df.mean(axis=1),
+##             'Low': df3.iloc[:, np.ceil(N*alpha/2).astype(int)],
+##             'High' : df3.iloc[:, np.floor(N*(1-alpha/2)).astype(int)-1]}
+#
+#    over_thresh = sorted((df.T>stats['High']*1).sum(axis=1))[N-N//10] #remove top 10% of data by time spent outside bounds
+#    under_thresh = sorted((df.T<stats['Low']*1).sum(axis=1))[N-N//10]
+#    over = df.T[(df.T>stats['High']*1).sum(axis=1)>=over_thresh].T
+#    under = df.T[(df.T<stats['Low']*1).sum(axis=1)>=under_thresh].T
+#
+#    between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
+#    stats['Mean-between'] = between.mean(axis=1)
+#
+#    stats = pd.DataFrame(data=stats)#.rolling(window=100, center=True, min_periods=0)
+#
+#    return stats
 
 #import matplotlib.pyplot as plt
 #plt.close('all')
