@@ -35,7 +35,6 @@ def process(raw, norm=True, smooth=True, scale=True):
         data = (data - data.mean())/data.std()
     if smooth:
         data = data.rolling(window=30, center=True, min_periods=0).mean()
-        #TODO: data.ewm()
     if scale:
         sign = not positive_max(data)
         data = (data - data.min().min())/(data.max().max() - data.min().min())-int(sign)
@@ -48,6 +47,9 @@ def scale(data):
     return process(data, norm=False, smooth=False, scale=True)
 
 def positive_max(data):
+    """if the absolute largest value is positive, positive_max = True"""
+    if isinstance(data, pd.Series):
+        data = pd.DataFrame(data)
     return bool(abs(data.max().max())>abs(data.min().min()))
 
 def firstsmallest(arr):
@@ -73,7 +75,7 @@ def find_values(data, time=None, scale=1, offset=0, minor=False, fun=firstsmalle
     """
     Input:
     ----------
-    data : dataframe
+    data : Series or DataFrame
         input data
     time : Series
         use for times output. otherwise returns index
@@ -124,6 +126,79 @@ def find_values(data, time=None, scale=1, offset=0, minor=False, fun=firstsmalle
     times = indices.apply(lambda i: time[int(i)])
 
     return values, times
+
+def find_all_peaks(array, minor=False):
+    """Find all the minima, maxima, or both on an array."""
+    positive = positive_max(array) if (not minor) else (not positive_max(array))
+
+    if not positive: #find minimum values
+        pts = (np.diff(np.sign(np.diff(array))) > 0).nonzero()[0] + 1
+    elif positive: #find maximum values
+        pts = (np.diff(np.sign(np.diff(array))) < 0).nonzero()[0] + 1
+    else:
+        pts = np.diff(np.sign(np.diff(array))).nonzero()[0] + 1
+    return pts
+
+def smooth_peaks(data, return_windows=False):
+    """Find the least-smoothed curve such that there exists a single peak in the
+    range of interest.
+
+    Input:
+    ----------
+    data : Series or Dataframe
+        input data
+    return_windows : bool (deactivated for now)
+        flag to set to output windows used for smoothing
+
+    Returns:
+    ----------
+    smooth_data : Series or DataFrame, like given
+        values found in data
+    windows : dict (deactivated for now)
+        window used in smoothing operation
+
+    >>> smooth_data = smooth_peaks(data)
+    >>> peaks, times = find_peaks(smooth_data, time)
+
+    Notes:
+    ----------
+    Peaks found are garanteed to be lesser in magnitude than the raw data. The
+    purpose of this function is to find an appropriate time-to-peak value for
+    oscilating data.
+    """
+    if isinstance(data, pd.Series):
+        data = pd.DataFrame(data)
+        return_series=True
+    else:
+        return_series=False
+    dropped = pd.concat([data, data.dropna(axis=1)], axis=1).T.drop_duplicates(keep=False).T
+    if not dropped.empty:
+        data = data.dropna(axis=1)
+        print('A column was dropped because it contained nan values. Please '
+              'clean data before passing')
+
+    smooth_data = pd.DataFrame(columns=data.columns)
+#    windows = {}
+
+    for tcn in data.columns:
+        N=0
+        not_smooth=True
+        thresh = np.max(data[tcn]) if positive_max(data[tcn]) else np.min(data[tcn])
+        search_range = np.nonzero(data[tcn]/thresh>0.75) # 0.75 = sensitivity [0,1]. Lower gives broader range
+        lower, upper = np.min(search_range), np.max(search_range)
+        while not_smooth:
+            N+=10
+            smoothed = data[tcn].rolling(window=N, center=True, min_periods=0).mean()
+            pts = find_all_peaks(smoothed)
+            if len(pts[(lower<=pts) & (pts<=upper)]) == 1:
+                not_smooth = False
+        smooth_data[tcn] = smoothed
+#        windows[tcn] = N
+
+    if return_series:
+        return smooth_data[tcn]
+    else:
+        return smooth_data
 
 def clean_outliers(data, returning):
     """Returns either the input data after dropping outliers, or the minimum
