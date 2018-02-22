@@ -7,6 +7,7 @@ Created on Fri Feb  2 10:33:47 2018
 import os
 import numpy as np
 import pandas as pd
+import scipy.stats
 import matplotlib.pyplot as plt
 from PMG.COM.openbook import openHDF5
 
@@ -26,22 +27,25 @@ def import_data(directory, channel, tcns=None, sl=slice(None), check=True):
         clean = clean_outliers(raw)
     return t, clean
 
-def process(raw, norm=True, smooth=True, scale=True):
+def process(raw, norm=True, smooth=True, scale=True, win_type='parzen'):
     """Preprocess data for use in calcuations, etc. set the appropriate flags
-    for normalization, smoothings, and scaling
+    for normalization, smoothings, and scaling. The win_type should be one of:
+    'boxcar', 'triang, 'parzen'. boxcar procudes a simple moving average,
+    triang produces a linearly weigthed average, and parzen procudes a 4th
+    order B-spline window weighted average.
     """
     data = raw.copy()
     if norm:
         data = (data - data.mean())/data.std()
     if smooth:
-        data = data.rolling(window=30, center=True, min_periods=0).mean()
+        data = data.rolling(window=30, center=True, min_periods=0, win_type=win_type).mean()
     if scale:
         sign = not positive_max(data)
         data = (data - data.min().min())/(data.max().max() - data.min().min())-int(sign)
     return data
 
-def smooth(data):
-    return process(data, norm=False, smooth=True, scale=False)
+def smooth(data, win_type):
+    return process(data, norm=False, smooth=True, scale=False, win_type=win_type)
 
 def scale(data):
     return process(data, norm=False, smooth=False, scale=True)
@@ -65,13 +69,13 @@ def firstsmallest(arr):
     else:
         return arr[0]
 
-def find_peaks(data, time=None, minor=False):
-        return find_values(data, time, minor=minor, fun='min')
+def find_peak(data, time=None, minor=False):
+        return find_value(data, time, minor=minor, fun='min')
 
-def find_values_old(data, time=None, scale=1, offset=0, minor=False):
-        return find_values(data, time, scale, offset, minor, 'min')
+def find_value_old(data, time=None, scale=1, offset=0, minor=False):
+        return find_value(data, time, scale, offset, minor, 'min')
 
-def find_values(data, time=None, scale=1, offset=0, minor=False, fun=firstsmallest):
+def find_value(data, time=None, scale=1, offset=0, minor=False, fun=firstsmallest):
     """
     Input:
     ----------
@@ -139,9 +143,27 @@ def find_all_peaks(array, minor=False):
         pts = np.diff(np.sign(np.diff(array))).nonzero()[0] + 1
     return pts
 
-def smooth_peaks(data, return_windows=False):
-    """Find the least-smoothed curve such that there exists a single peak in the
-    range of interest.
+def bounds(df, tcn):
+    """return the left, right, upper, and lower bounds of a peak"""
+    column = df[tcn]
+    lower, upper = df.min().min(), df.max().max()
+    positive = abs(upper)>abs(lower)
+    through_zero = (upper>=0) and (lower<=0)
+    if through_zero:
+        lower, upper = (-lower, upper) if positive else (lower, -upper)
+    else:
+        mean = df.mean().mean()
+        lower, upper = (mean+lower, upper) if positive else (lower, mean-upper)
+    limit = lower if positive else upper
+
+    search_range = np.nonzero(column/limit>1)
+    left, right = np.min(search_range), np.max(search_range)
+
+    return left, right, lower, upper
+
+def smooth_peaks(data):
+    """Find the least-smoothed curve such that there exists a single peak in
+    the range of interest.
 
     Input:
     ----------
@@ -154,8 +176,6 @@ def smooth_peaks(data, return_windows=False):
     ----------
     smooth_data : Series or DataFrame, like given
         values found in data
-    windows : dict (deactivated for now)
-        window used in smoothing operation
 
     >>> smooth_data = smooth_peaks(data)
     >>> peaks, times = find_peaks(smooth_data, time)
@@ -178,22 +198,23 @@ def smooth_peaks(data, return_windows=False):
               'clean data before passing')
 
     smooth_data = pd.DataFrame(columns=data.columns)
-#    windows = {}
 
     for tcn in data.columns:
         N=0
-        not_smooth=True
-        thresh = np.max(data[tcn]) if positive_max(data[tcn]) else np.min(data[tcn])
-        search_range = np.nonzero(data[tcn]/thresh>0.75) # 0.75 = sensitivity [0,1]. Lower gives broader range
-        lower, upper = np.min(search_range), np.max(search_range)
-        while not_smooth:
+        smooth=False
+        left, right, lower, upper = bounds(data, tcn)
+        while not smooth:
             N+=10
-            smoothed = data[tcn].rolling(window=N, center=True, min_periods=0).mean()
+            smoothed = data[tcn].rolling(window=N, center=True, min_periods=0, win_type='triang').mean()
             pts = find_all_peaks(smoothed)
-            if len(pts[(lower<=pts) & (pts<=upper)]) == 1:
-                not_smooth = False
+            # if there exists a single peak within the bounds, it is now smooth
+            if len(pts[(lower <= data[tcn].loc[pts].values) & \
+                       (data[tcn].loc[pts].values <= upper) & \
+                       (left <= pts) & (pts <= right)]) == 1:
+                smooth = True
+            if N>500:
+                break
         smooth_data[tcn] = smoothed
-#        windows[tcn] = N
 
     if return_series:
         return smooth_data[tcn]
@@ -278,7 +299,7 @@ def stats(df):
 
     df = df.dropna(axis=1)
     df2 = df.apply(lambda row: sorted(row), axis=1)
-    df3 = df2.rolling(window=100, center=True, min_periods=0).mean()
+    df3 = df2.rolling(window=100, center=True, min_periods=0, win_type='boxcar').mean()
     N = df.shape[1]
 
     stats = {'Mean': df.mean(axis=1),
@@ -293,9 +314,66 @@ def stats(df):
     between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
     stats['Mean-between'] = between.mean(axis=1)
 
-    stats = pd.DataFrame(data=stats)#.rolling(window=100, center=True, min_periods=0)
+    stats = pd.DataFrame(data=stats)
 
     return stats
+
+def average_rows(df, window):
+    sampled_df = df[::window].copy()
+    for l, r in zip(sampled_df.index, sampled_df.index+window):
+        sampled_df.loc[l,:] = df.loc[l:r,:].mean(axis=0)
+    return sampled_df
+
+# TODO - upsample back to full size?
+
+def stats_kde(df):
+    """Estimate cdf based on kde. Use alpha to determine upper and lower
+    limits on data"""
+
+    def kde_band(row):
+        alpha = 3/(len(row)+3) #heuristic lower bound for level of confidence
+        kde = scipy.stats.gaussian_kde(row, bw_method=0.25) #bandwidth more aggressive that default
+        x = np.linspace(min(row)*1.5, max(row)*1.5, 1000)
+        cdf = np.cumsum(kde(x))/np.sum(kde(x))
+        lower = x[np.argmin(np.abs(cdf-alpha/2))]
+        upper = x[np.argmin(np.abs(cdf-(1-alpha/2)))]
+        return lower, upper
+
+    df = clean_outliers(df.dropna(axis=1), 'data')
+    N = df.shape[1]
+    df2 = average_rows(df, 5)
+    df2 = df2.apply(lambda row: kde_band(row), axis=1)
+    stats = pd.DataFrame(df2.tolist(), index=df2.index)
+    stats.columns=['Low','High']
+    stats['Mean'] = df.mean(axis=1)
+
+    over_thresh = sorted((df.T>stats['High']*1).sum(axis=1))[N-N//10] #remove top 10% of data by time spent outside bounds
+    under_thresh = sorted((df.T<stats['Low']*1).sum(axis=1))[N-N//10]
+    over = df.T[(df.T>stats['High']*1).sum(axis=1)>=over_thresh].T
+    under = df.T[(df.T<stats['Low']*1).sum(axis=1)>=under_thresh].T
+
+    between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
+    stats['Mean-between'] = between.mean(axis=1)
+    N_between = between.shape[1]
+
+    stats = stats.rolling(window=50, center=True, min_periods=0, win_type='parzen').mean()
+
+    return stats, N_between, 3/(N+3)
+
+### kde-based cdf
+#plt.figure()
+#row = df.iloc[1600]
+#row.hist(density=True)
+#x = np.linspace(min(row)-2, max(row)+3, 100)
+#kde = scipy.stats.gaussian_kde(row)
+#pdf = kde(x)
+#cdf = np.cumsum(kde(x))/np.sum(kde(x))
+#plt.plot(x, pdf)
+#plt.plot(x, cdf)
+#ax=plt.gca()
+#alpha=0.05
+#ax.axvline(x[np.argmin(np.abs(cdf-alpha/2))])
+#ax.axvline(x[np.argmin(np.abs(cdf-(1-alpha/2)))])
 
 ### 10ms rolling window of 95% data
 #alpha = 0.05

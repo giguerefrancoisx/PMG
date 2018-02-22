@@ -67,8 +67,8 @@ def plotbook(savedir, chlist, tcns=None):
     plt.close('all')
     for channel in chlist:
 
-        slipdf, slipstats = slip[channel], data.stats(slip[channel])
-        okdf, okstats = ok[channel], data.stats(ok[channel])
+        slipdf, slipstats, slip_N, slip_alpha = slip[channel], *data.stats_kde(slip[channel])
+        okdf, okstats, ok_N, ok_alpha = ok[channel], *data.stats_kde(ok[channel])
 
         ylim = style.ylim_no_outliers([slipdf, okdf])
         ylabel = style.ylabel(channel[12:14], channel[14:15])
@@ -99,12 +99,12 @@ def plotbook(savedir, chlist, tcns=None):
 
         #FOURTH SUBPLOT - 'CIBLE' vs 'BELIER' Groups (mean and intervals)
         plt.subplot(2,2,2, sharey = ax)
-        plt.plot(time, slipstats['Mean'], color = 'tab:blue', label = 'Mean (Slip), n = {}'.format(slipdf.shape[1]))
-        plt.plot(time, slipstats['Mean-between'], color = 'tab:purple', label = 'Mean-between (Slip), n = {}'.format(slipdf.shape[1]))
-        plt.fill_between(time, slipstats['High'], slipstats['Low'], color = 'tab:blue', alpha = 0.25, label = 'Intervals (Slip)')
-        plt.plot(time, okstats['Mean'], color = 'tab:orange', label = 'Mean (Ok), n = {}'.format(okdf.shape[1]))
-        plt.plot(time, okstats['Mean-between'], color = 'tab:red', label = 'Mean-between (Ok), n = {}'.format(okdf.shape[1]))
-        plt.fill_between(time, okstats['High'], okstats['Low'], color = 'tab:orange', alpha = 0.25, label = 'Intervals (Ok)')
+        plt.plot(time[::5], slipstats['Mean'], color='tab:blue', label='Mean (Slip), n = {}'.format(slipdf.shape[1]))
+        plt.plot(time[::5], slipstats['Mean-between'], color='tab:purple', label='Mean-between (Slip), n = {}'.format(slip_N))
+        plt.fill_between(time[::5], slipstats['High'], slipstats['Low'], color='tab:blue', alpha=0.25, label='Intervals (Slip) {:2.0f}%'.format(100*(1-slip_alpha)))
+        plt.plot(time[::5], okstats['Mean'], color='tab:orange', label='Mean (Ok), n = {}'.format(okdf.shape[1]))
+        plt.plot(time[::5], okstats['Mean-between'], color='tab:red', label='Mean-between (Ok), n = {}'.format(ok_N))
+        plt.fill_between(time[::5], okstats['High'], okstats['Low'], color='tab:orange', alpha=0.25, label='Intervals (Ok) {:2.0f}%'.format(100*(1-ok_alpha)))
         plt.xlim(*xlim)
         ax.set_ylim(*ylim)
         plt.title('All Belts (Mean and Intervals)')

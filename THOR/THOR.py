@@ -28,7 +28,7 @@ chlist.extend(codestring('10??????00??AC[!R]?'))
 #chlist.extend(codestring('11NECKLO??THFO[X,Y]?'))
 #chlist.extend(codestring('11BRIC????TH????'))
 #chlist.extend(codestring('11PELV????THACX?'))
-#chlist.extend(codestring('11FEMR[RI,LE]??THFOZ?'))
+#chlist.extend(codestring('11FEMRLE??THFOZ?'))
 #chlist.extend(codestring('11HEAD00??THAC[X,Y,Z]?'))
 #chlist.extend(codestring('11????????TH????'))
 #chlist.extend([ '11HEAD0000THAVXA', '11HEAD0000THAVYA', '11HEAD0000THAVZA', '11HEAD0000THANYA'])
@@ -47,6 +47,6 @@ tcns = ['TC11-239', 'TC14-214', 'TC14-218', 'TC14-220', 'TC15-120', 'TC15-210', 
 
 #writeHDF5(chlist, readdir)
 
-#plot_thor(savedir, chlist, tcns)
+plot_thor(savedir, chlist, tcns)
 
 print('All Done!')

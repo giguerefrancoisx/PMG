@@ -279,7 +279,7 @@ if __name__ == '__main__':
 #              '11CHST0000H3ACXC', '11CHST0000THACXC', '11NECKLO00THFOXA',
 #              '11PELV0000H3ACXA', '11PELV0000THACXA']
 #    channel = chlist[7]
-    channel = '10CVEHCG0000ACXD'
+    channel = '10CVEHCG0000ACYD'
     sl = slice(100,1600)
     data = os.fspath('P:/AHEC/DATA/THOR/')
     project = 'THOR'
@@ -298,7 +298,7 @@ if __name__ == '__main__':
 
     clusters, *data = cluster(channel, sl, data, project, output, N=4, tcns=tcns,
                        norm=True, smooth=True, plot_all=True, plot_data=True,
-                       matrix=False, tag='VCG')
+                       matrix=False, tag='VCGY')
 
 #%% Time stuff
 #import time as timer

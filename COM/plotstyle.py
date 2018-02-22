@@ -10,6 +10,7 @@ Created on Tue Nov  7 16:13:57 2017
 #from GitHub.COM.plotstyle import ''
 import pandas as pd
 import matplotlib.pyplot as plt
+from PMG.COM.data import clean_outliers
 
 def colordict(keys):
     """Assigns a tab color to each item in the list"""
@@ -80,7 +81,6 @@ def ylim_no_outliers(data, scale=1.08):
     """Returns the ylimits necessary to correctly plot the dataset passed as
     input. You may pass a dataframe or list of dataframes to evaluate.
     """
-    from PMG.COM.outliers import clean_outliers
 
     ymin, ymax = clean_outliers(data, 'limits')
 
