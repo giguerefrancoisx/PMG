@@ -131,9 +131,11 @@ def find_value(data, time=None, scale=1, offset=0, minor=False, fun=firstsmalles
 
     return values, times
 
-def find_all_peaks(array, minor=False):
+def find_all_peaks(array, minor=False, override=None):
     """Find all the minima, maxima, or both on an array."""
     positive = positive_max(array) if (not minor) else (not positive_max(array))
+    if override is not None and override in ['min', 'max']:
+        positive = True if override == 'max' else False
 
     if not positive: #find minimum values
         pts = (np.diff(np.sign(np.diff(array))) > 0).nonzero()[0] + 1
@@ -238,6 +240,7 @@ def clean_outliers(data, returning):
     maxlist = data.max()
     maxlist.name = 'max'
     maxlist = maxlist.sort_values(ascending=False).reset_index()
+    # TODO improve detection formula below
     above_average = maxlist.loc[0,'max'] > 6*maxlist.loc[1:,'max'].mean()
     significant = maxlist.loc[0,'max'] > maxlist.loc[1,'max']+1
     if above_average and significant:
@@ -318,11 +321,19 @@ def stats(df):
 
     return stats
 
-def average_rows(df, window):
-    sampled_df = df[::window].copy()
-    for l, r in zip(sampled_df.index, sampled_df.index+window):
-        sampled_df.loc[l,:] = df.loc[l:r,:].mean(axis=0)
-    return sampled_df
+def downsample(df, window):
+    downsampled = df[::window].copy()
+    for l, r in zip(downsampled.index, downsampled.index+window):
+        downsampled.loc[l,:] = df.loc[l:r,:].mean(axis=0)
+    return downsampled
+
+def upsample(downsampled, window):
+    upsampled = pd.DataFrame([], columns=downsampled.columns,
+                             index=range(downsampled.index[0],downsampled.index[-1]+window))
+    for row in downsampled.index:
+        upsampled.loc[row,:] = downsampled.loc[row,:]
+    upsampled = upsampled.fillna(method='ffill')
+    return upsampled.rolling(window, center=True, min_periods=0).mean()
 
 # TODO - upsample back to full size?
 
@@ -331,19 +342,31 @@ def stats_kde(df):
     limits on data"""
 
     def kde_band(row):
-        alpha = 3/(len(row)+3) #heuristic lower bound for level of confidence
-        kde = scipy.stats.gaussian_kde(row, bw_method=0.25) #bandwidth more aggressive that default
-        x = np.linspace(min(row)*1.5, max(row)*1.5, 1000)
-        cdf = np.cumsum(kde(x))/np.sum(kde(x))
-        lower = x[np.argmin(np.abs(cdf-alpha/2))]
-        upper = x[np.argmin(np.abs(cdf-(1-alpha/2)))]
+        alpha = 0.05 # 95% coverage
+        kde = scipy.stats.gaussian_kde(row, bw_method=1/4*(np.tanh(0.11*len(row)-1.37)+1)) #custom bw function, could improve
+        lowrange = min(-5, row.min()+1*(row.min()-row.mean())) #pad range of values so pdf can reach ~0 on either end
+        highrange = max(5, row.max()+1*(row.max()-row.mean()))
+        x = np.linspace(lowrange, highrange, 1000)
+        pdf = kde(x)
+        cdf = np.cumsum(pdf)/np.sum(pdf)
+        # find plateaus if any and crop pdf
+        plateau = find_all_peaks(np.log(pdf), override='min')
+        plateau = plateau[pdf[plateau]<0.0005] #above will catch dips, threshold to make sure it's really a plateau
+        lows = np.append(plateau[cdf[plateau]<0.5],np.array([0]))
+        highs = np.append(plateau[cdf[plateau]>0.5],np.array([len(x)]))
+        left, right = lows.max(), highs.min()
+        pdf2 = pdf[left:right+1]
+        cdf2 = np.cumsum(pdf2)/np.sum(pdf2)
+        x2 = x[left:right+1]
+        lower = x2[np.argmin(np.abs(cdf2-alpha/2))]
+        upper = x2[np.argmin(np.abs(cdf2-(1-alpha/2)))]
         return lower, upper
 
     df = clean_outliers(df.dropna(axis=1), 'data')
     N = df.shape[1]
-    df2 = average_rows(df, 5)
+    df2 = downsample(df, 5)
     df2 = df2.apply(lambda row: kde_band(row), axis=1)
-    stats = pd.DataFrame(df2.tolist(), index=df2.index)
+    stats = upsample(pd.DataFrame(df2.tolist(), index=df2.index),5)
     stats.columns=['Low','High']
     stats['Mean'] = df.mean(axis=1)
 
@@ -354,18 +377,17 @@ def stats_kde(df):
 
     between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
     stats['Mean-between'] = between.mean(axis=1)
-    N_between = between.shape[1]
 
-    stats = stats.rolling(window=50, center=True, min_periods=0, win_type='parzen').mean()
+    stats = stats.rolling(window=150, center=True, min_periods=0, win_type='parzen').mean()
 
-    return stats, N_between, 3/(N+3)
+    return stats
 
 ### kde-based cdf
 #plt.figure()
-#row = df.iloc[1600]
+#row = df.iloc[100]
 #row.hist(density=True)
-#x = np.linspace(min(row)-2, max(row)+3, 100)
-#kde = scipy.stats.gaussian_kde(row)
+#x = np.linspace(min(-10,row.min()+(row.min()-row.mean())), max(10, row.max()+(row.max()-row.mean())), 1000)
+#kde = scipy.stats.gaussian_kde(row, bw_method=(len(row)+60)/300)
 #pdf = kde(x)
 #cdf = np.cumsum(kde(x))/np.sum(kde(x))
 #plt.plot(x, pdf)
@@ -374,6 +396,18 @@ def stats_kde(df):
 #alpha=0.05
 #ax.axvline(x[np.argmin(np.abs(cdf-alpha/2))])
 #ax.axvline(x[np.argmin(np.abs(cdf-(1-alpha/2)))])
+#plateau = find_all_peaks(np.log(pdf), override='min')
+#plateau = plateau[pdf[plateau]<0.0001]
+#lows = np.append(plateau[cdf[plateau]<0.5],np.array([0]))
+#highs = np.append(plateau[cdf[plateau]>0.5],np.array([len(x)]))
+#left, right = lows.max(), highs.min()
+#pdf2 = pdf[left:right+1]
+#cdf2 = np.cumsum(pdf2)/np.sum(pdf2)
+#x2 = x[left:right+1]
+#plt.plot(x2, pdf2)
+#plt.plot(x2, cdf2)
+#ax.axvline(x2[np.argmin(np.abs(cdf2-alpha/2))])
+#ax.axvline(x2[np.argmin(np.abs(cdf2-(1-alpha/2)))])
 
 ### 10ms rolling window of 95% data
 #alpha = 0.05
