@@ -22,6 +22,8 @@ Created on Tue Feb 13 10:09:03 2018
 #            shutil.copyfile(readdir+subdir+file, readdir+'THOR/'+file)
 
 #%% GET LABEL FROM PLOT ON CLICK
+#fig = plt.figure()
+##...
 #ax = plt.gca()
 #annot = ax.annotate("", xy=(0,0), xytext=(20,20),textcoords="offset points",
 #                    bbox=dict(boxstyle="round", fc="w"),
@@ -93,3 +95,25 @@ Created on Tue Feb 13 10:09:03 2018
 #chs = Counter(chlist)
 #chset = [list(chs.keys())[i] for i in range(len(list(chs.keys()))) if list(chs.values())[i] >= 6] #arbitrary 6 repeats
 #print(chset)
+#%% Plot knee distance vs femur load
+#from PMG.COM.table import get
+#import matplotlib.pyplot as plt
+#import scipy.stats
+#import numpy as np
+#table = get('THOR')
+#table = table[table.CBL_BELT.isin(['SLIP','OK'])]
+#table = table.drop(table[table.KNEES.isin(['NAN'])].index)
+#slip = table[table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+#ok = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+#x_slip, y_slip = table[table.CIBLE.isin(slip)].KNEES, table[table.CIBLE.isin(slip)]['FEMUR MAX']
+#x_ok, y_ok = table[table.CIBLE.isin(ok)].KNEES, table[table.CIBLE.isin(ok)]['FEMUR MAX']
+#plt.figure()
+#plt.plot(x_slip, y_slip, '.', label='slip')
+#plt.plot(x_ok, y_ok, '.', label='ok')
+#slope, intercept, r_value, *_ = scipy.stats.linregress(x_slip, y_slip)
+#line_slip = np.poly1d((slope, intercept))
+#plt.plot(x_slip, line_slip(x_slip), label='Slip, R^2 = {:.3f}'.format(r_value**2))
+#slope, intercept, r_value, *_ = scipy.stats.linregress(x_ok, y_ok)
+#line_slip = np.poly1d((slope, intercept))
+#plt.plot(x_ok, line_slip(x_ok), label='Ok, R^2 = {:.3f}'.format(r_value**2))
+#plt.legend()

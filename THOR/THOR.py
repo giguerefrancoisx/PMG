@@ -16,7 +16,7 @@ readdir = os.fspath('P:/AHEC/DATA/THOR/')
 savedir = os.fspath('P:/AHEC/Plots/THOR/')
 #
 chlist = []
-#chlist.extend(codestring('10??????00??AC[!R]?'))
+chlist.extend(codestring('10??????00??AC[!R]?'))
 chlist.extend(codestring('11SEBE????B?????'))
 chlist.extend(codestring('11CHST0000THACX?'))
 #chlist.extend(codestring('11CHST????THDC0?'))

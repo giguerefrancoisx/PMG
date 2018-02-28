@@ -67,8 +67,8 @@ def plotbook(savedir, chlist, tcns=None):
     plt.close('all')
     for channel in chlist:
 
-        slipdf, slipstats = slip[channel], data.stats_kde(slip[channel])
-        okdf, okstats = ok[channel], data.stats_kde(ok[channel])
+        slipdf, slipstats = slip[channel], data.stats(slip[channel])
+        okdf, okstats = ok[channel], data.stats(ok[channel])
 
         ylim = style.ylim_no_outliers([slipdf, okdf])
         ylabel = style.ylabel(channel[12:14], channel[14:15])
