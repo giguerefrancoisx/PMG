@@ -7,25 +7,54 @@ Created on Fri Feb  2 10:33:47 2018
 import os
 import numpy as np
 import pandas as pd
-import scipy.stats
 import matplotlib.pyplot as plt
-from PMG.COM.openbook import openHDF5
+import PMG.COM.openbook as ob
 
-def import_data(directory, channel, tcns=None, sl=slice(None), check=True):
-    """Import a channel's dataframe, cleaned of outliers. Optionally filter by
+def import_data(directory, channels, tcns=None, sl=slice(None), check=True):
+    """Import a channel's or channels' dataframe(s), cleaned of outliers. Optionally filter by
     list of tcns and slice. Set check to False to skip 'view  outliers' prompt
+
+    Input:
+    ----------
+    directory : str
+        path to HDF5 store
+    channels : str or list
+        channels for which to return data. If string, returns DataFrame rather than dictionary
+    tcns : list
+        list of tcns to include. missing data will automatically be dropped
+    sl : slice object
+        slice for rows.
+    check : bool
+        If false, bypass checking and drop any outliers found by clean_outliers()
+
+    Returns:
+    ----------
+    time : Series
+        corresponding time channel
+    clean : dict (or DataFrame)
+        cleaned data ready for use.
     """
-    time, fulldata = openHDF5(os.fspath(directory), [channel])
-    data = fulldata[channel]
-    raw = data[sl]
+    return_single = False
+    if isinstance(channels, str):
+        channels = [channels]
+        return_single = True
+    time, fulldata = ob.openHDF5(os.fspath(directory), channels)
     t = time[sl]
-    if tcns is not None:
-        raw = raw.loc[:,tcns].dropna(axis=1)
-    if check:
-        clean = check_and_clean(raw)
+
+    clean = {}
+    for channel in channels:
+        raw = fulldata[channel][sl]
+
+        if tcns is not None:
+            raw = raw.loc[:,tcns].dropna(axis=1)
+        if check:
+            clean[channel] = check_and_clean(raw, stage=1)
+        else:
+            clean[channel] = clean_outliers(raw, stage=1)
+    if return_single:
+        return t, clean[channel]
     else:
-        clean = clean_outliers(raw)
-    return t, clean
+        return t, clean
 
 def process(raw, norm=True, smooth=True, scale=True, win_type='parzen'):
     """Preprocess data for use in calcuations, etc. set the appropriate flags
@@ -38,10 +67,10 @@ def process(raw, norm=True, smooth=True, scale=True, win_type='parzen'):
     if norm:
         data = (data - data.mean())/data.std()
     if smooth:
-        data = data.rolling(window=30, center=True, min_periods=0, win_type=win_type).mean()
+        data = data.rolling(30, 0, center=True, win_type=win_type).mean()
     if scale:
         sign = not positive_max(data)
-        data = (data - data.min().min())/(data.max().max() - data.min().min())-int(sign)
+        data = (data-data.min().min())/(data.max().max()-data.min().min())-int(sign)
     return data
 
 def smooth(data, win_type):
@@ -207,7 +236,7 @@ def smooth_peaks(data):
         left, right, lower, upper = bounds(data, tcn)
         while not smooth:
             N+=10
-            smoothed = data[tcn].rolling(window=N, center=True, min_periods=0, win_type='triang').mean()
+            smoothed = data[tcn].rolling(N, 0, center=True, win_type='triang').mean()
             pts = find_all_peaks(smoothed)
             # if there exists a single peak within the bounds, it is now smooth
             if len(pts[(lower <= data[tcn].loc[pts].values) & \
@@ -223,61 +252,61 @@ def smooth_peaks(data):
     else:
         return smooth_data
 
-def clean_outliers(data, returning):
-    """Returns either the input data after dropping outliers, or the minimum
-    and maximum of that data.
+def clean_outliers(data, stage):
 
-    Inputs:
-        data: You may pass a dataframe or list of dataframes to evaluate.
-
-        returning: either 'data' or 'limits'
-    """
-    output = None
     if isinstance(data, list):
         data = pd.concat(data, axis=1)
     data = data.T[data.any()].T
 
-    maxlist = data.max()
-    maxlist.name = 'max'
-    maxlist = maxlist.sort_values(ascending=False).reset_index()
-    # TODO improve detection formula below
-    above_average = maxlist.loc[0,'max'] > 6*maxlist.loc[1:,'max'].mean()
-    significant = maxlist.loc[0,'max'] > maxlist.loc[1,'max']+1
-    if above_average and significant:
-        tcn = maxlist.loc[0,'index']
-        ymax = maxlist.loc[1,'max']
-        output = clean_outliers(data.drop(tcn, axis=1), returning)
-    else:
-        ymax = maxlist.loc[0,'max']
+    if stage not in [0,1,2]:
+        raise ValueError('Invalid stage selection. Use 0, 1, or 2')
 
-    minlist = data.min()
-    minlist.name = 'min'
-    minlist = minlist.sort_values(ascending=True).reset_index()
-    above_average = minlist.loc[0,'min'] < 6*minlist.loc[1:,'min'].mean()
-    significant = minlist.loc[0,'min'] < minlist.loc[1,'min']-1
-    if above_average and significant:
-        tcn = minlist.loc[0,'index']
-        ymin = minlist.loc[1,'min']
-        output = clean_outliers(data.drop(tcn, axis=1), returning)
-    else:
-        ymin = minlist.loc[0,'min']
-
-    if returning == 'limits':
-        if output is not None:
-            ymin, ymax = output
-        return ymin, ymax
-    if returning == 'data':
-        if output is not None:
-            data = output
+    if stage == 0:
         return data
 
-def check_and_clean(raw):
+    if stage >= 1:
+        """This stage should recover data that is not the result of defective mesurements"""
+
+        ### Slope Method
+        slopes = np.abs(np.diff(data.T)).max(axis=1)
+        mad = (data.T-data.T.median()).abs().median().T #outlier-adjusted std
+        low, high = data.median(axis=1)-3*mad, data.median(axis=1)+3*mad
+        thresh = (high.max()-low.min())*0.25 #(factor 0.25-0.5)
+        spikes = np.nonzero(slopes>thresh)[0]
+        data = data.drop(data.columns[spikes], axis=1)
+
+        ### Variance of cummulative Method
+#        adj = (data**2).cumsum()
+#        last = adj.iloc[-1]
+#        last = last.sort_values()
+#
+#        thresh = 1.30 #threshold 1.30 < thresh < 1.38
+#        while last.std()/last[:-1].std() > thresh:
+#            last = last[:-1]
+#        data = data.loc[:,last.index]
+
+    if stage == 2:
+        """This stage should take accurate but unruly data and remove out-of-the-ordinary traces"""
+
+        ### 4-Sigma deviation cummulative Method
+        data_sum = ((data.T-data.median(axis=1)).T.abs()**0.5).cumsum()
+        high = data_sum.mean(axis=1)+3*data_sum.std(axis=1)
+        outside = (data_sum.T>high).T.sum(axis=0)
+        outliers = np.nonzero(outside>200)[0]
+        data = data.drop(data.columns[outliers], axis=1)
+
+        ### Outliergram
+        from PMG.outliergram import outliergram
+        data, *_ = outliergram(data, mode='both', factorsh=1.5, factormg=1.5)
+
+    return data
+
+def check_and_clean(raw, stage):
     """Check thats the data does not contain outliers as found by
     clean_outliers(). Prompts the user for whether a plot highlighting the
     outliers should be shown. Options are to retain or discard the outliers.
     """
-    raw = raw.T[raw.any()].T #filter out bad/missing traces
-    clean = clean_outliers(raw, 'data')
+    clean = clean_outliers(raw, stage)
     outliers = pd.concat([raw, clean], axis=1).T.drop_duplicates(keep=False).T
 
     if not outliers.empty:
@@ -286,7 +315,8 @@ def check_and_clean(raw):
             plt.figure()
             plt.plot(clean, alpha=0.25)
             plt.plot(outliers)
-            plt.waitforbuttonpress()
+            while not plt.waitforbuttonpress():
+                pass
             plt.close('all')
             action = input("discard: any\nretain: 'keep'\n>>>")
 
@@ -298,10 +328,11 @@ def check_and_clean(raw):
     return clean
 
 def stats(df):
-    alpha = 0.1 #0.05 = 95% coverage. Cannot be 0 or 1
+    alpha = 0.2 #0.05 = 95% coverage. Cannot be 0 or 1
 
     df = df.dropna(axis=1)
-    df2 = df.apply(lambda row: sorted(row), axis=1)
+    df2 = df.copy()
+    df2.values.sort() #row each row individually, in-place
     N = df.shape[1]
 
     stats = {'Mean': df.mean(axis=1),
@@ -309,59 +340,33 @@ def stats(df):
              'High' : df2.iloc[:, np.floor(N*(1-alpha/2)).astype(int)]}
     stats = pd.DataFrame(data=stats)
 
-    over_thresh = sorted((df.T>stats['High']*1).sum(axis=1))[N-N//10] #remove top 10% of data by time spent outside bounds
-    under_thresh = sorted((df.T<stats['Low']*1).sum(axis=1))[N-N//10]
-    over = df.T[(df.T>stats['High']*1).sum(axis=1)>=over_thresh].T
-    under = df.T[(df.T<stats['Low']*1).sum(axis=1)>=under_thresh].T
+    not_too_high = (df.T>stats['High']).T.sum().sort_values()[:N-N//10] #remove top 10% of data by time spent outside bounds
+    not_too_low = (df.T<stats['Low']).T.sum().sort_values()[:N-N//10]
+    between = df[not_too_high.index.intersection(not_too_low.index)]
 
-    between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
     stats['Mean-between'] = between.mean(axis=1)
 
-    stats = stats.rolling(window=100, center=True, min_periods=0, win_type='parzen').mean()
+    stats = stats.rolling(100, 0, center=True, win_type='parzen').mean()
 
     return stats
 
-#def stats2(df):
-#
-#    def interpolate(x_arr, y_arr, y_target):
-#        x_arr = np.array(x_arr)
-#        y_arr = np.array(y_arr)
-#        closest = np.argmin(np.abs(y_arr-y_target))
-#        smaller = y_arr[closest]<y_target
-#        other = closest+1 if smaller else closest-1
-#        idx = np.sort(np.array((closest, other)))
-#        x = x_arr[idx]
-#        y = y_arr[idx]
-#        x_new = np.diff(x)/np.diff(y)*(y_target-y[0])+x[0]
-#        return x_new[0]
-#
-#    def band(row):
-#        alpha = 0.05 #0.05 = 95% coverage
-#        row = sorted(row)
-#        cdf = np.arange(len(row))/(len(row)-1)
-#        lower = interpolate(row, cdf, alpha/2)
-#        upper = interpolate(row, cdf, 1-alpha/2)
-#        return lower, upper
-#
-#    df = df.dropna(axis=1)
-#    N = df.shape[1]
-#
-#    df4 = df.apply(lambda row: band(row), axis=1)
-#    stats = pd.DataFrame(df4.tolist(), index=df4.index)
-#    stats.columns=['Low','High']
-#    stats['Mean'] = df.mean(axis=1)
-#
-#    over_thresh = sorted((df.T>stats['High']*1).sum(axis=1))[N-N//10] #remove top 10% of data by time spent outside bounds
-#    under_thresh = sorted((df.T<stats['Low']*1).sum(axis=1))[N-N//10]
-#    over = df.T[(df.T>stats['High']*1).sum(axis=1)>=over_thresh].T
-#    under = df.T[(df.T<stats['Low']*1).sum(axis=1)>=under_thresh].T
-#
-#    between = pd.concat([df, over, under], axis=1).T.drop_duplicates(keep=False).T
-#    stats['Mean-between'] = between.mean(axis=1)
-#
-#    stats = stats.rolling(window=100, center=True, min_periods=0, win_type='boxcar').mean()
-#
-#    return stats
+def statsNEW(df):
+    df = df.dropna(axis=1)
+
+    stats = {'Mean': df.mean(axis=1),
+             'Low': df.median(axis=1)-4*df[(df.T<df.median(axis=1)).T].mad(axis=1),
+             'High' : df.median(axis=1)+4*df[(df.T>df.median(axis=1)).T].mad(axis=1)}
+    stats = pd.DataFrame(data=stats)
+
+    not_too_high = df.T[(df.T>stats['High']).T.sum().sort_values()<200]
+    not_too_low = df.T[(df.T<stats['Low']).T.sum().sort_values()<200]
+    between = df[not_too_high.index.intersection(not_too_low.index)]
+
+    stats['Mean-between'] = between.mean(axis=1)
+
+    stats = stats.rolling(100, 0, center=True, win_type='parzen').mean()
+
+    return stats
 
 def downsample(df, window):
     downsampled = df[::window].copy()
@@ -375,7 +380,7 @@ def upsample(df, window):
     for row in df.index:
         upsampled.loc[row,:] = df.loc[row,:]
     upsampled = upsampled.fillna(method='ffill')
-    return upsampled.rolling(window, center=True, min_periods=0).mean()
+    return upsampled.rolling(window, 0, center=True).mean()
 
 #def stats_kde(df):
 #    """Estimate cdf based on kde. Use alpha to determine upper and lower
@@ -423,6 +428,11 @@ def upsample(df, window):
 #    stats = stats.rolling(window=150, center=True, min_periods=0, win_type='parzen').mean()
 #
 #    return stats
+#### Padding formula
+#        row = some 1-D data
+#        lowrange = min(-0.1, row.min()+1*(row.min()-row.mean())) #pad range of values so pdf can reach ~0 on either end
+#        highrange = max(0.1, row.max()+1*(row.max()-row.mean()))
+#        x = np.linspace(lowrange, highrange, 1000)
 #
 #def stats_kde_rolled(df):
 #    """Estimate cdf based on kde. Use alpha to determine upper and lower

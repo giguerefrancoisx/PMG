@@ -143,8 +143,12 @@ def _categorize(path, project, chlist, tcns, column, categories):
     PMG.COM.table.get(), split() and this file's openHDF5() for parameter
     explanations.
     """
+    import PMG.COM.data as data
     table = tb.get(project)
     time, fulldata = openHDF5(path, chlist)
+    for channel, df in fulldata.items():
+        print(channel)
+        fulldata[channel] = data.check_and_clean(df, stage=1)
     split_table = tb.split(table, column, categories)
     category_dict = {}
     for category in categories:

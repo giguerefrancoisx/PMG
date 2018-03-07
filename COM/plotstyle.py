@@ -82,7 +82,8 @@ def ylim_no_outliers(data, scale=1.08):
     input. You may pass a dataframe or list of dataframes to evaluate.
     """
 
-    ymin, ymax = clean_outliers(data, 'limits')
+    clean = clean_outliers(data, stage=1)
+    ymin, ymax = clean.min().min(), clean.max().max()
 
     ymax = scale*ymax if ymax > ymin/10 else ymin/10
     ymin = scale*ymin if ymin < -ymax/10 else -ymax/10

@@ -180,17 +180,17 @@ def respace(t, x, N=None):
     x = x[new_points]
     return t, x
 
-def preprocess(raw, norm=True, smooth=True):
-    datadf = raw.copy()
-    if norm:
-        datadf = (datadf - datadf.mean())/datadf.std()
-    if smooth:
-        datadf = datadf.rolling(window=30, center=True, min_periods=0).mean()
-    sign = int(abs(datadf.max().max())<abs(datadf.min().min()))
-    datadf = (datadf - datadf.min().min())/(datadf.max().max() - datadf.min().min())-sign
-    return datadf
+#def preprocess(raw, norm=True, smooth=True):
+#    datadf = raw.copy()
+#    if norm:
+#        datadf = (datadf - datadf.mean())/datadf.std()
+#    if smooth:
+#        datadf = datadf.rolling(window=30, center=True, min_periods=0).mean()
+#    sign = int(abs(datadf.max().max())<abs(datadf.min().min()))
+#    datadf = (datadf - datadf.min().min())/(datadf.max().max() - datadf.min().min())-sign
+#    return datadf
 
-def cluster(channel, sl, data, project, output, N=6, tcns=None, norm=True,
+def cluster(channel, sl, path, project, output, N=6, tcns=None, norm=True,
             smooth=True, plot_all=True, plot_data=True, matrix=False, tag='dtw'):
     """Clusters the data provided into N groups.
 
@@ -200,7 +200,7 @@ def cluster(channel, sl, data, project, output, N=6, tcns=None, norm=True,
         ISO code for channel of interest. ex: '11PELV0000THACXA'
     sl:
         slice object for the time interval of interest. ex: slice(200,1650)
-    data:
+    path:
         location of the data folder from which to open HDF5 store. ex: 'P:/AHEC/DATA/'
     project:
         one of 'AHEC', 'BOOSTER', 'THOR'
@@ -238,10 +238,10 @@ def cluster(channel, sl, data, project, output, N=6, tcns=None, norm=True,
 #    t, raw, labels, lbd = import_data(channel, sl, SAI, project, tcns)
 #    datadf = preprocess(raw, norm, smooth)
 #    from GitHub.COM.data import import_SAI, process
-    t, raw = import_data(data, channel, tcns, sl)
+    t, raw = import_data(path, channel, tcns, sl)
     labels, lbd = make_labels(raw, project, tcns)
-    datadf = process(raw, norm, smooth, scale=True)
-    X = np.array(datadf.transpose())
+    df = process(raw, norm, smooth, scale=True)
+    X = np.array(df.T)
 
     m,_ = X.shape
     global count
@@ -269,9 +269,9 @@ def cluster(channel, sl, data, project, output, N=6, tcns=None, norm=True,
         ax = plt.gca()
         ax.plot(t, raw)
         ax2 = plt.twinx(ax=ax)
-        ax2.plot(t, datadf, ':')
+        ax2.plot(t, df, ':')
 
-    return clusters, raw, datadf
+    return clusters, raw, df
 
 ### Run the main function unless imported
 if __name__ == '__main__':
@@ -279,9 +279,9 @@ if __name__ == '__main__':
 #              '11CHST0000H3ACXC', '11CHST0000THACXC', '11NECKLO00THFOXA',
 #              '11PELV0000H3ACXA', '11PELV0000THACXA']
 #    channel = chlist[7]
-    channel = '10CVEHCG0000ACYD'
+    channel = '11ILACRI00THMOYA'
     sl = slice(100,1600)
-    data = os.fspath('P:/AHEC/DATA/THOR/')
+    path = os.fspath('P:/AHEC/DATA/THOR/')
     project = 'THOR'
     output = 'P:/AHEC/Plots/Clustering/THOR/'
 #    tcns = ['TC15-163', 'TC11-008', 'TC09-027', 'TC14-035', 'TC13-007',
@@ -296,9 +296,9 @@ if __name__ == '__main__':
 
 #    tcns=None
 
-    clusters, *data = cluster(channel, sl, data, project, output, N=4, tcns=tcns,
-                       norm=True, smooth=True, plot_all=True, plot_data=True,
-                       matrix=False, tag='VCGY')
+    clusters, *data = cluster(channel, sl, path, project, output, N=4, tcns=tcns,
+                       norm=False, smooth=True, plot_all=True, plot_data=True,
+                       matrix=False, tag='ILAC-n')
 
 #%% Time stuff
 #import time as timer
