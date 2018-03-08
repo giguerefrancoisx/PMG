@@ -56,17 +56,22 @@ def openHDF5(directory, channels=None):
         with pandas.HDFStore(directory+'Channels.h5', mode='r+') as data_store:
             fulldata = {}
 
-            if channels is not None:
-                if isinstance(channels, str):
-                    channels = [channels]
-                for channel in channels:
-                    chdata = data_store.select('C'+channel)
-                    fulldata[channel] = chdata.iloc[:,1:]
+            try:
+                if channels is not None:
+                    if isinstance(channels, str):
+                        channels = [channels]
+                    for channel in channels:
+                        chdata = data_store.select('C'+channel)
+                        fulldata[channel] = chdata.iloc[:,1:]
 
-            else:
-                for key in data_store.keys():
-                    chdata = data_store.select(key)
-                    fulldata[key[2:]] = chdata.iloc[:,1:]
+                else:
+                    for key in data_store.keys():
+                        chdata = data_store.select(key)
+                        fulldata[key[2:]] = chdata.iloc[:,1:]
+            except KeyError:
+                raise KeyError('Channel {} has not been written to the '
+                               'channels HDF5 store yet. You must first use '
+                               'the writeHDF5 function'.format(channel))
 
             time = chdata.iloc[:4100,0].round(4)
     except OSError:
