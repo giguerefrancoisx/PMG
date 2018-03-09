@@ -6,22 +6,51 @@ Created on Tue Nov  7 16:13:57 2017
 
 @author: gigue
 """
-### Code to import this file
-#from GitHub.COM.plotstyle import ''
 import pandas as pd
+import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 from PMG.COM.data import clean_outliers
 
-def colordict(keys):
-    """Assigns a tab color to each item in the list"""
+def colordict(data, by='order', values=None):
 
-    values = ['tab:blue', 'tab:green','tab:orange', 'tab:red', 'tab:purple',
-              'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive','tab:cyan']
+    if by == 'max':
+        maxlist = (data.max()-data.max().min())/(data.max().max()-data.max().min())
+        keys = maxlist.sort_values(ascending=False).index
+    elif by == 'min':
+        minlist = (data.min()-data.min().min())/(data.min().max()-data.min().min())
+        keys = minlist.sort_values(ascending=True).index
+    elif by == 'order':
+        keys = data.columns
+    else:
+        raise Exception('No other colorby methods implemented yet')
+
+    if values is None:
+        values = plt.rcParamsDefault['axes.prop_cycle'].by_key()['color']
+#        values = plt.cm.viridis
+
+    if isinstance(values, colors.ListedColormap):
+        cmap = values
+        n_steps = len(cmap.colors)//len(keys)
+        if n_steps >= 1:
+            values = cmap.colors[::n_steps]
+        else:
+            values = cmap.colors
+
+    elif isinstance(values, colors.LinearSegmentedColormap):
+        cmap = values
+        n_steps = cmap.N//len(keys)
+        if n_steps >= 1:
+            values = [cmap(n)[:3] for n in range(0, cmap.N, n_steps)]
+        else:
+            values = [cmap(n)[:3] for n in range(cmap.N)]
+    elif isinstance(values, list):
+        pass
+
     if len(keys) > len(values):
         values = [values[k%len(values)] for k in range(len(keys))]
-    colors = dict(zip(keys, values))
+    colordict = dict(zip(keys, values))
 
-    return colors
+    return colordict
 
 def labels(ax, title, ylabel):
     """Sets the axis limits and labels"""
