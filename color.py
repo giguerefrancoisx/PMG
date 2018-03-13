@@ -4,7 +4,7 @@ Created on Thu Mar  8 15:12:17 2018
 
 @author: giguerf
 """
-import matplotlib
+#import matplotlib
 import matplotlib.pyplot as plt
 #from cycler import cycler
 """
@@ -22,7 +22,7 @@ plt.rcParams['axes.prop_cycle'] = plt.cycler(color=plt.cm.viridis.colors)
 TO SEE AVAILABLE COLORMAPS USE:
 
 plt.colormaps()
-
+https://matplotlib.org/examples/color/colormaps_reference.html
 
 FROM THE MAPLOTLIB DOCUMENTATION:
 
@@ -189,64 +189,65 @@ Other miscellaneous schemes:
   ============= =======================================================
   """
 
-def colorby(data, by='order', values=None):
-
-    if by == 'max':
-        maxlist = (data.max()-data.max().min())/(data.max().max()-data.max().min())
-        keys = maxlist.sort_values(ascending=False).index
-    elif by == 'min':
-        minlist = (data.min()-data.min().min())/(data.min().max()-data.min().min())
-        keys = minlist.sort_values(ascending=True).index
-    elif by == 'order':
-        keys = data.columns
-    else:
-        raise Exception('No other colorby methods implemented yet')
-
-    if values is None:
-        values = plt.cm.viridis
-
-    if isinstance(values, matplotlib.colors.ListedColormap):
-        cmap = values
-        n_steps = len(cmap.colors)//len(keys)
-        if n_steps >= 1:
-            values = cmap.colors[::n_steps]
-        else:
-            values = cmap.colors
-
-    elif isinstance(values, matplotlib.colors.LinearSegmentedColormap):
-        cmap = values
-        n_steps = cmap.N//len(keys)
-        if n_steps >= 1:
-            values = [cmap(n)[:3] for n in range(0, cmap.N, n_steps)]
-        else:
-            values = [cmap(n)[:3] for n in range(cmap.N)]
-
-
-    values = [values[k%len(values)] for k in range(len(keys))]
-    colors = dict(zip(keys, values))
-
-    return colors
+#def colorby(data, by='order', values=None):
+#
+#    if by == 'max':
+#        maxlist = (data.max()-data.max().min())/(data.max().max()-data.max().min())
+#        keys = maxlist.sort_values(ascending=False).index
+#    elif by == 'min':
+#        minlist = (data.min()-data.min().min())/(data.min().max()-data.min().min())
+#        keys = minlist.sort_values(ascending=True).index
+#    elif by == 'order':
+#        keys = data.columns
+#    else:
+#        raise Exception('No other colorby methods implemented yet')
+#
+#    if values is None:
+#        values = plt.cm.viridis
+#
+#    if isinstance(values, matplotlib.colors.ListedColormap):
+#        cmap = values
+#        n_steps = len(cmap.colors)//len(keys)
+#        if n_steps >= 1:
+#            values = cmap.colors[::n_steps]
+#        else:
+#            values = cmap.colors
+#
+#    elif isinstance(values, matplotlib.colors.LinearSegmentedColormap):
+#        cmap = values
+#        n_steps = cmap.N//len(keys)
+#        if n_steps >= 1:
+#            values = [cmap(n)[:3] for n in range(0, cmap.N, n_steps)]
+#        else:
+#            values = [cmap(n)[:3] for n in range(cmap.N)]
+#
+#
+#    values = [values[k%len(values)] for k in range(len(keys))]
+#    colors = dict(zip(keys, values))
+#
+#    return colors
 
 if __name__ == '__main__':
-#    import PMG.COM.data as data
-#    import PMG.COM.table as tb
-#    THOR = 'P:/AHEC/Data/THOR/'
-#    chlist = ['11NECKLO00THFOXA']
-#    time, fulldata = data.import_data(THOR, chlist)
+    import PMG.COM.data as data
+    import PMG.COM.table as tb
+    import PMG.COM.plotstyle as style
+    THOR = 'P:/AHEC/Data/THOR/'
+    chlist = ['11NECKLO00THFOXA']
+    time, fulldata = data.import_data(THOR, chlist)
     df = fulldata['11NECKLO00THFOXA'].dropna(axis=1)
-#    table = tb.get('THOR')
-#    table = table[table.TYPE.isin(['Frontale/Véhicule'])]
-#    slips  = table[table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
-#    oks = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+    table = tb.get('THOR')
+    table = table[table.TYPE.isin(['Frontale/Véhicule'])]
+    slips  = table[table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+    oks = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
     plt.close('all')
     #%%
     plt.figure()
-    colors = colorby(df, 'order', plt.cm.YlGnBu)
+    colors = style.colordict(df, 'order', plt.cm.YlGnBu)
     for tcn in df.columns[:]:
         plt.plot(df.loc[:,tcn], color=colors[tcn])
     #%%
     df = df.loc[:,slips+oks]
-    colors = colorby(df, 'max', plt.cm.YlGnBu)
+    colors = style.colordict(df, 'max', None)#plt.cm.plasma)
     fig, axs = plt.subplots(1, 2, sharex=True, sharey=True)
     for ax, tcns in zip(axs, [slips, oks]):
         for tcn in tcns:

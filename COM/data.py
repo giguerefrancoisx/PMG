@@ -252,7 +252,7 @@ def smooth_peaks(data):
     else:
         return smooth_data
 
-def clean_outliers(data, stage):
+def clean_outliers(data, stage): #TODO - restrict to range (eg: before 200ms)
 
     if isinstance(data, list):
         data = pd.concat(data, axis=1)
@@ -289,15 +289,37 @@ def clean_outliers(data, stage):
         """This stage should take accurate but unruly data and remove out-of-the-ordinary traces"""
 
         ### 4-Sigma deviation cummulative Method
-        data_sum = ((data.T-data.median(axis=1)).T.abs()**0.5).cumsum()
-        high = data_sum.mean(axis=1)+3*data_sum.std(axis=1)
-        outside = (data_sum.T>high).T.sum(axis=0)
-        outliers = np.nonzero(outside>200)[0]
-        data = data.drop(data.columns[outliers], axis=1)
+#        data_sum = ((data.T-data.median(axis=1)).T.abs()**0.5).cumsum()
+#        high = data_sum.mean(axis=1)+3*data_sum.std(axis=1)
+#        outside = (data_sum.T>high).T.sum(axis=0)
+#        outliers = np.nonzero(outside>200)[0]
+#        data = data.drop(data.columns[outliers], axis=1)
+
+        ### MAD above median cummulative deviation
+#        high = data.median(axis=1)+6*data[(data.T>data.median(axis=1)).T].mad(axis=1)
+#        low = data.median(axis=1)-6*data[(data.T<data.median(axis=1)).T].mad(axis=1)
+#        too_high = (data.T-high).T[(data.T>high).T].sum()
+#        too_low = (-data.T+low).T[(data.T<low).T].sum()
+
+#        ### Influence on std:
+#        stddf = df.copy()
+#        for tcn in df.columns:
+#            stddf[tcn] = df.drop(tcn,axis=1).std(axis=1)
+#        mad_above = data.copy()
+#        mad_below = data.copy()
+#        for tcn in data.columns:
+#            tcns = 3 random tcns
+#            mad_above[tcn] = data[(data.T>data.median(axis=1)).T].drop(tcn,axis=1).mad(axis=1)
+#            mad_below[tcn] = data[(data.T<data.median(axis=1)).T].drop(tcn,axis=1).mad(axis=1)
+
+#        high = data.median(axis=1)+6*mad_above.min(axis=1)
+#        low = data.median(axis=1)-6*mad_below.min(axis=1)
+
+        ### Mean variance change for entire trace
 
         ### Outliergram
-        from PMG.outliergram import outliergram
-        data, *_ = outliergram(data, mode='both', factorsh=1.5, factormg=1.5)
+#        from PMG.outliergram import outliergram
+#        data, *_ = outliergram(data, mode='both', factorsh=1.5, factormg=1.5)
 
     return data
 
@@ -327,17 +349,38 @@ def check_and_clean(raw, stage):
 
     return clean
 
+#def stats(df):
+#    alpha = 0.2 #0.05 = 95% coverage. Cannot be 0 or 1
+#
+#    df = df.dropna(axis=1)
+#    df2 = df.copy()
+#    df2.values.sort() #row each row individually, in-place
+#    N = df.shape[1]
+#
+#    stats = {'Mean': df.mean(axis=1),
+#             'Low': df2.iloc[:, np.floor(N*alpha/2).astype(int)],
+#             'High' : df2.iloc[:, np.floor(N*(1-alpha/2)).astype(int)]}
+#    stats = pd.DataFrame(data=stats)
+#
+#    not_too_high = (df.T>stats['High']).T.sum().sort_values()[:N-N//10] #remove top 10% of data by time spent outside bounds
+#    not_too_low = (df.T<stats['Low']).T.sum().sort_values()[:N-N//10]
+#    between = df[not_too_high.index.intersection(not_too_low.index)]
+#
+#    stats['Mean-between'] = between.mean(axis=1)
+#
+#    stats = stats.rolling(100, 0, center=True, win_type='parzen').mean()
+#
+#    return stats
+
 def stats(df):
-    alpha = 0.2 #0.05 = 95% coverage. Cannot be 0 or 1
+    alpha = 0.2 #0.05 = 95% coverage
 
     df = df.dropna(axis=1)
-    df2 = df.copy()
-    df2.values.sort() #row each row individually, in-place
     N = df.shape[1]
 
-    stats = {'Mean': df.mean(axis=1),
-             'Low': df2.iloc[:, np.floor(N*alpha/2).astype(int)],
-             'High' : df2.iloc[:, np.floor(N*(1-alpha/2)).astype(int)]}
+    stats = {'Mid': df.median(axis=1),
+             'Low': df.quantile(alpha/2, axis=1),
+             'High' : df.quantile(1-alpha/2, axis=1)}
     stats = pd.DataFrame(data=stats)
 
     not_too_high = (df.T>stats['High']).T.sum().sort_values()[:N-N//10] #remove top 10% of data by time spent outside bounds

@@ -6,45 +6,113 @@ Created on Tue Nov  7 16:13:57 2017
 
 @author: gigue
 """
+import numpy as np
 import pandas as pd
-import matplotlib.colors as colors
+import matplotlib.colors as clrs
 import matplotlib.pyplot as plt
 from PMG.COM.data import clean_outliers
 
 def colordict(data, by='order', values=None):
+    """Creates a dictionary of color assignments based on an iterable or
+    DataFrame.
 
-    if by == 'max':
-        maxlist = (data.max()-data.max().min())/(data.max().max()-data.max().min())
-        keys = maxlist.sort_values(ascending=False).index
-    elif by == 'min':
-        minlist = (data.min()-data.min().min())/(data.min().max()-data.min().min())
-        keys = minlist.sort_values(ascending=True).index
-    elif by == 'order':
-        keys = data.columns
+    Input
+    -----------
+    data : iterable or DataFrame
+        keys will be derived from this object. For a DataFrame or Series, column labels
+        are used. For iterable, index is used
+    by : 'max, 'min', or 'order'
+        for an iterable, max and min will sort the list by it's values in
+        ascending and descending order, respectively. For a DataFrame, 'max'
+        and 'min' will order the list of columns by the maximum and minimum
+        value of each column. 'order' will preserve original order for all
+        types.
+
+    values : any sequence whose items are recognised by matplotlib as a color
+        If None, default color cycle is used. Listed and Linear segmented
+        colormaps can be used, as well as iterables will color IDs as name
+        strings, hex strings, rgb tuples, etc. See color.py for list of
+        colormaps in matplotlib.
+
+    Returns
+    -----------
+    colors : dict
+        a dictionary whose keys are the list passed to this function and whose
+        values are colors in a valid matplotlib representation.
+
+    Examples
+    -----------
+    >>> colors = colordict(['TC11-239', 'TC14-214', 'TC14-220', 'TC17-211', 'TC17-206'], by='order', values=plt.cm.viridis)
+    >>> colors
+    >>> {'TC11-239': [0.267004, 0.004874, 0.329415],
+         'TC14-214': [0.253935, 0.265254, 0.529983],
+         'TC14-220': [0.163625, 0.471133, 0.558148],
+         'TC17-206': [0.477504, 0.821444, 0.318195],
+         'TC17-211': [0.134692, 0.658636, 0.517649]}
+    """
+    if isinstance(values, clrs.LinearSegmentedColormap):
+        N = values.N-1
     else:
-        raise Exception('No other colorby methods implemented yet')
+        N=1
+
+    if isinstance(data, (pd.DataFrame, pd.Series)):
+        if isinstance(data, pd.Series):
+            data = pd.DataFrame(data).T
+        if by == 'max':
+            maxlist = 1-(data.max()-data.max().min())/(data.max().max()-data.max().min())
+            keys = maxlist.sort_values().index
+            maxlist[np.isnan(maxlist)] = 0
+            mapping = (maxlist[keys]*N).round(0).astype(int)
+        elif by == 'min':
+            minlist = (data.min()-data.min().min())/(data.min().max()-data.min().min())
+            keys = minlist.sort_values().index
+            minlist[np.isnan(minlist)] = 0
+            mapping = (minlist[keys]*N).round(0).astype(int)
+        elif by == 'mean':
+            scale = 1-(data.mean()-data.mean().min())/(data.mean().max()-data.mean().min())
+            keys = scale.sort_values().index
+            scale[np.isnan(scale)] = 0
+            mapping = (scale[keys]*N).round(0).astype(int)
+        elif by == 'order':
+            keys = data.columns
+            mapping = np.arange(len(data.columns))*N//(len(data.columns)-1)
+        else:
+            raise Exception('No other coloring methods implemented yet')
+    else:
+        if by == 'max':
+            maxlist = (data-min(data))/(max(data)-min(data))
+            keys = np.flip(np.argsort(data), 0)
+            mapping = (maxlist[keys]*N).round(0).astype(int)
+        elif by == 'min':
+            minlist = (data-min(data))/(max(data)-min(data))
+            keys = np.argsort(data)
+            mapping = (minlist[keys]*N).round(0).astype(int)
+        elif by == 'order':
+            keys = data
+            mapping = np.arange(len(data))*N//(len(data)-1)
+        else:
+            raise Exception('No other coloring methods implemented yet')
 
     if values is None:
         values = plt.rcParamsDefault['axes.prop_cycle'].by_key()['color']
-#        values = plt.cm.viridis
 
-    if isinstance(values, colors.ListedColormap):
+    if isinstance(values, clrs.ListedColormap):
         cmap = values
         n_steps = len(cmap.colors)//len(keys)
         if n_steps >= 1:
             values = cmap.colors[::n_steps]
         else:
             values = cmap.colors
+        #values = camp.colors[mapping]
 
-    elif isinstance(values, colors.LinearSegmentedColormap):
+    elif isinstance(values, clrs.LinearSegmentedColormap):
         cmap = values
-        n_steps = cmap.N//len(keys)
-        if n_steps >= 1:
-            values = [cmap(n)[:3] for n in range(0, cmap.N, n_steps)]
-        else:
-            values = [cmap(n)[:3] for n in range(cmap.N)]
-    elif isinstance(values, list):
-        pass
+#        n_steps = cmap.N//len(keys)
+#        if n_steps >= 1:
+#            values = [cmap(n)[:3] for n in range(0, cmap.N, n_steps)]
+#        else:
+#            values = [cmap(n)[:3] for n in range(cmap.N)]
+        values = [rgb[:3] for rgb in cmap(mapping)]
 
     if len(keys) > len(values):
         values = [values[k%len(values)] for k in range(len(keys))]
@@ -70,41 +138,6 @@ def explode(d, dv):
             dv.append(v)
 
     return dv
-
-def ylim(data):
-    """
-    Returns ylim matching argument.
-    Pass 'data' as a dict with series objects
-    or 'measure' as a string eg. 'AC', 'FO'
-    """
-
-    import math
-#    ymax = max([abs(i) for i in [ymin,ymax]])
-#    ymin = -ymax
-#    bounds = (0, 0.2, ymin, ymax)
-
-    ### FROM DATA
-    if isinstance(data, dict):
-        dv = explode(data, [])
-        try:
-            df = pd.concat(dv, axis = 1)
-        except TypeError as err:
-#            print('Dictionary contains non-DataFrame objects at root')
-            raise TypeError('Dictionary contains non-DataFrame objects at depth')
-#            x = input('Show list?\n')
-#            if x in ['yes', 'ok']:
-#                print(dv)
-#                return dv
-        ymin = 1.08*min(df.min())
-        ymax = 1.08*max(df.max())
-        ylim = (ymin, ymax) #add floor, ceil?
-
-        if any([math.isnan(lim) for lim in ylim]):
-            ylim = (None, None)
-    else:
-        raise TypeError('Data must be a dictionary of DataFrames')
-
-    return ylim
 
 def ylim_no_outliers(data, scale=1.08):
     """Returns the ylimits necessary to correctly plot the dataset passed as
@@ -141,13 +174,13 @@ def ylabel(dimension, direction):
 
     return ylabel
 
-def legend(ax, loc):
+def legend(ax, loc, **kwargs):
     """Removes duplicate line labels and creates legend at desired location"""
 
     from collections import OrderedDict
     handles, labels = ax.get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
-    lgd = ax.legend(by_label.values(), by_label.keys(), loc = loc)
+    lgd = ax.legend(by_label.values(), by_label.keys(), loc = loc, **kwargs)
     return lgd
 
 def maximize():
