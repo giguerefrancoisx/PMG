@@ -4,20 +4,25 @@ Created on Tue Mar 13 08:51:04 2018
 
 @author: giguerf
 """
+import numpy as np
+#import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import PMG.COM.data as dat
 import PMG.COM.table as tb
 import PMG.COM.plotstyle as style
 THOR = 'P:/AHEC/Data/THOR/'
-chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB']
-time, fulldata = dat.import_data(THOR, chlist)
-df = fulldata['11NECKLO00THFOXA'].dropna(axis=1)
+chlist = []
+chlist.extend(['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB'])
+chlist.extend(['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA'])
+chlist.extend(['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA'])
+time, fulldata = dat.import_data(THOR, chlist, check=False)
 table = tb.get('THOR')
 table = table[table.TYPE.isin(['Frontale/Véhicule'])]
 slips  = table[table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
 oks = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
 
+plt.rcParams['font.size']= 10
 #%% Comparison of slip and ok traces for select channels
 #plt.close('all')
 #df = df.loc[:,slips+oks]
@@ -53,57 +58,170 @@ oks = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
 #axs[2].set_xlabel('Time [s]')
 #axs[0].set_ylabel('Lower Neck $F_x$ [N]')
 #%% Comparison of slip and ok traces for select channels
-plt.close('all')
-#chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA']
-labels = ['Lower Neck $\mathregular{F_x}$ [N]',
-          'Lower Neck $\mathregular{F_y}$ [N]',
-          'Upper Left Chest $\mathregular{D_x}$ [mm]',
-          'Left Femur $\mathregular{F_x}$ [N]']
-ylabel = dict(zip(chlist, labels))
-xfmt = matplotlib.ticker.ScalarFormatter(useMathText=True)
-xfmt.set_powerlimits((-3,4))
+if 0:
+    plt.close('all')
+    chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB']
+    labels = ['Lower Neck $\mathregular{F_x}$ [N]',
+              'Lower Neck $\mathregular{F_y}$ [N]',
+              'Upper Left Chest $\mathregular{D_x}$ [mm]',
+              'Left Femur $\mathregular{F_x}$ [N]']
+    ylabel = dict(zip(chlist, labels))
+    xfmt = matplotlib.ticker.ScalarFormatter(useMathText=True)
+    xfmt.set_powerlimits((-3,4))
 
-slip_color = 'tab:blue'
-ok_color = 'tab:red'
-n = len(chlist)
+    slip_color = 'tab:blue'
+    ok_color = 'tab:red'
+    n = len(chlist)
 
-fig, axs = style.subplots(n, 2, sharex='all', sharey='row', figsize=(6.5,2*n))
-plt.rcParams['font.size']= 10
+    fig, axs = style.subplots(n, 2, sharex='all', sharey='row', figsize=(6.5,2*n))
 
-for i, channel in enumerate(chlist):
-    df = fulldata[channel].dropna(axis=1)
-    df = df.loc[:,slips+oks]
-    for tcn in slips:
-        axs[0+2*i].plot(time, df.loc[:,tcn], color=slip_color, lw=1, label='Slip')
-    for tcn in oks:
-        axs[0+2*i].plot(time, df.loc[:,tcn], color=ok_color, lw=1, label='No-Slip')
+    for i, channel in enumerate(chlist):
+        df = fulldata[channel].dropna(axis=1)
+        df = df.loc[:,slips+oks]
+        for tcn in slips:
+            axs[0+2*i].plot(time, df.loc[:,tcn], color=slip_color, lw=1, label='Slip')
+        for tcn in oks:
+            axs[0+2*i].plot(time, df.loc[:,tcn], color=ok_color, lw=1, label='No-Slip')
 
-    window = 100
-    alpha = 0.10
-    slip_median = df.loc[:,slips].median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
-    ok_median = df.loc[:,oks].median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
-    slip_high = df.loc[:,slips].quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
-    slip_low = df.loc[:,slips].quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
-    ok_high = df.loc[:,oks].quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
-    ok_low = df.loc[:,oks].quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        window = 100
+        alpha = 0.10
+        slip_median = df.loc[:,slips].median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        ok_median = df.loc[:,oks].median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        slip_high = df.loc[:,slips].quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        slip_low = df.loc[:,slips].quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        ok_high = df.loc[:,oks].quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        ok_low = df.loc[:,oks].quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
 
 
-    axs[1+2*i].plot(time, slip_median, color=slip_color, label='Median, n={}'.format(len(slips)))
-    axs[1+2*i].plot(time, ok_median, color=ok_color, label='Median, n={}'.format(len(oks)))
-    axs[1+2*i].fill_between(time, slip_high, slip_low, color=slip_color, alpha=0.2, label='{:2.0f}th Percentile'.format(100*(1-alpha)))
-    axs[1+2*i].fill_between(time, ok_high, ok_low, color=ok_color, alpha=0.2, label='{:2.0f}th Percentile'.format(100*(1-alpha)))
-#    axs[1+2*i].legend(loc='lower right', fontsize=6)
+        axs[1+2*i].plot(time, slip_median, color=slip_color, label='Median, n={}'.format(len(slips)))
+        axs[1+2*i].plot(time, ok_median, color=ok_color, label='Median, n={}'.format(len(oks)))
+        axs[1+2*i].fill_between(time, slip_high, slip_low, color=slip_color, alpha=0.2, label='{:2.0f}th Percentile'.format(100*(1-alpha)))
+        axs[1+2*i].fill_between(time, ok_high, ok_low, color=ok_color, alpha=0.2, label='{:2.0f}th Percentile'.format(100*(1-alpha)))
+    #    axs[1+2*i].legend(loc='lower right', fontsize=6)
 
-    axs[0+2*i].set_ylabel(ylabel[channel])
-    axs[0+2*i].yaxis.set_label_coords(-0.28,0.5)
-    axs[0+2*i].yaxis.set_major_formatter(xfmt)
+        axs[0+2*i].set_ylabel(ylabel[channel])
+        axs[0+2*i].yaxis.set_label_coords(-0.28,0.5)
+        axs[0+2*i].yaxis.set_major_formatter(xfmt)
 
-axs[-1].set_xlim(0,0.3)
-axs[-1].set_xlabel('Time [s]')
-axs[-2].set_xlabel('Time [s]')
+    axs[-1].set_xlim(0,0.3)
+    axs[-1].set_xlabel('Time [s]')
+    axs[-2].set_xlabel('Time [s]')
 
-style.legend(axs[-2], loc='lower right', fontsize=6)
-axs[-1].legend(loc='lower right', fontsize=6)
+    style.legend(axs[-2], loc='lower right', fontsize=6)
+    axs[-1].legend(loc='lower right', fontsize=6)
 
-plt.tight_layout()
-#%% Figure
+    plt.tight_layout()
+#%% Bootstrapped timing differences - Redo with
+def bootstrap_resample(X, n=1):
+    X_resample = np.zeros((n,len(X)))
+    for i in range(n):
+        resample_i = np.floor(np.random.rand(len(X))*len(X)).astype(int)
+        X_resample[i] = X[resample_i]
+    return X_resample
+
+if 0:
+    chlist = ['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA']
+    #chlist = ['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA']
+    chname = ['Head', 'Spine T1', 'Chest', 'Spine T12', 'Pelvis']
+
+    slip_color = 'tab:blue'
+    ok_color = 'tab:red'
+###
+    #ch = chlist[0]
+    #df = fulldata[ch].dropna(axis=1).iloc[:,:20]
+    #peaks, times = dat.find_peak(dat.smooth_peaks(df), time)
+    #sm = dat.smooth_peaks(df)
+    #peaks, times = dat.find_peak(sm, time)
+    #plt.figure()
+    #plt.plot(time, df, alpha=0.2)
+    #plt.plot(time, sm)#, alpha=0.2)
+    #plt.plot(times, peaks, '.', color='k')
+
+###
+    #plt.close('all')
+    #fig, axs = style.subplots(2,2,sharex='all', sharey='all')
+    #for ax, n in zip(axs, [500,1000,5000,10000]):
+    #    x1_r = bootstrap_resample(times.values, n=n)
+    #    means = x1_r.mean(axis=1)
+    #    heights, bin_edges = np.histogram(means, bins=np.linspace(means.min(), means.max(),100), density=True)
+    #    ax.bar(bin_edges[:-1], heights, width=np.diff(bin_edges)[0])
+###
+#    ch = chlist[0]
+#
+#    plt.close('all')
+#    plt.figure()
+#    ax = plt.gca()
+#    for group, label in zip([slips, oks], ['Slip', 'No-Slip']):
+#        df = fulldata[ch].dropna(axis=1).loc[:,group].dropna(axis=1)#.iloc[:,:20]
+#        peaks, times = dat.find_peak(dat.smooth_peaks(df), time)
+#        x1_r = bootstrap_resample(times.values, n=5000)
+#        means = x1_r.mean(axis=1)
+#        heights, bin_edges = np.histogram(means, bins=np.linspace(means.min(), means.max(),100), density=True)
+#        ax.bar(bin_edges[:-1], heights, width=np.diff(bin_edges)[0], label=label, alpha=0.5)
+#        ax.legend()
+#
+#    fig, axs = style.subplots(1, 2, sharex='all', sharey='all')
+#    for group, ax in zip([slips, oks], axs):
+#        df = fulldata[ch].dropna(axis=1).loc[:,group].dropna(axis=1)#.iloc[:,:20]
+#        sm = dat.smooth_peaks(df)
+#        peaks, times = dat.find_peak(sm, time)
+#        ax.plot(time, sm)
+#        ax.plot(times, peaks, '.', color='k')
+
+###
+    allpeaks = {}
+    alltimes = {}
+    for ch in chlist:
+        for group, label in zip([slips, oks], ['Slip', 'No-Slip']):
+            df = fulldata[ch].dropna(axis=1).loc[:,group].dropna(axis=1)#.iloc[:,:20]
+#            sm = dat.smooth_peaks(df)
+            sm = df
+            allpeaks[ch+label], alltimes[ch+label] = dat.find_peak(sm, time)
+
+    colors = dict(zip(['Slip', 'No-Slip'], [slip_color, ok_color]))
+
+    plt.close('all')
+    fig, axs = style.subplots(len(chlist), 1, sharex='all', sharey='all', figsize=(5,5), visible=False)
+
+    for i, (ch, name) in enumerate(zip(chlist, chname)):
+
+        for group, label in zip([slips, oks], ['Slip', 'No-Slip']):
+            df = fulldata[ch].dropna(axis=1).loc[:,group].dropna(axis=1)#.iloc[:,:20]
+            peaks, times = allpeaks[ch+label], alltimes[ch+label]
+            x1_r = bootstrap_resample(times.values, n=5000)
+            means = x1_r.mean(axis=1)
+#            heights, bin_edges = np.histogram(means, bins=np.linspace(means.min(), means.max(),100), density=True)
+            heights, bin_edges = np.histogram(means, bins=np.linspace(0.065, 0.105, 80), density=True)
+            axs[i].bar(bin_edges[:-1], heights, width=np.diff(bin_edges)[0], color=colors[label], label=label, alpha=0.5)
+#            axs[i].text(0.01, 0.85, name, horizontalalignment='left', verticalalignment='center', transform=axs[i].transAxes)
+
+    axs[-1].set_ylim(10,400)
+    axs[-1].set_xlim(0.065,0.105)
+    axs[-1].set_xlabel('Times [s]')
+    axs[-1].legend(loc='lower right')
+
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0)
+
+### Convert to Ridgeline Plot
+    overlap = 0.50
+    for ax, name in zip(axs, chname):
+#        ax.text(-0.01, 0.75-overlap, name, horizontalalignment='right', verticalalignment='center', transform=ax.transAxes)
+        ax.text(-0.01, 0.5*(1-overlap), name, horizontalalignment='right', verticalalignment='center', transform=ax.transAxes)
+        ax.patch.set_alpha(0)
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_edgecolor((0.85,0.85,0.85))
+        ax.tick_params(left='off', labelleft='off', bottom='off')
+
+    if overlap==0.5:
+        axs[0].spines['right'].set_visible(False)
+        axs[0].spines['left'].set_visible(False)
+        axs[1].spines['top'].set_visible(True)
+    else:
+        axs[0].spines['top'].set_visible(True)
+
+    axs[-1].tick_params(bottom='on')
+    axs[-1].spines['bottom'].set_edgecolor((0,0,0))
+
+    plt.subplots_adjust(left=0.177, top=0.97, hspace=-overlap)
+#%%

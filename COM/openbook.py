@@ -75,7 +75,7 @@ def openHDF5(directory, channels=None):
 
             time = chdata.iloc[:4100,0].round(4)
     except OSError:
-        raise OSError('File Not Found. You are not conected to P://Projects '
+        raise OSError('File Not Found. You are not conected to P:/Projects '
                       'or you must first create the channels HDF5 store using '
                       'the writeHDF5 function\n')
 

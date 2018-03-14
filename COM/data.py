@@ -83,7 +83,7 @@ def positive_max(data):
     """if the absolute largest value is positive, positive_max = True"""
     if isinstance(data, pd.Series):
         data = pd.DataFrame(data)
-    return bool(abs(data.max().max())>abs(data.min().min()))
+    return bool(abs(data.max().median())>abs(data.min().median()))
 
 def firstsmallest(arr):
     """Find the first value in the list that is not bigger than the rest by
@@ -174,20 +174,23 @@ def find_all_peaks(array, minor=False, override=None):
         pts = np.diff(np.sign(np.diff(array))).nonzero()[0] + 1
     return pts
 
-def bounds(df, tcn):
+def bounds(df, tcn): #TODO figure out a better lower, upper calculation
     """return the left, right, upper, and lower bounds of a peak"""
     column = df[tcn]
     lower, upper = df.min().min(), df.max().max()
-    positive = abs(upper)>abs(lower)
-    through_zero = (upper>=0) and (lower<=0)
+    positive = abs(df.max().median())>abs(df.min().median())
+#    through_zero = (upper>=0) and (lower<=0)
+    through_zero = df.max().median()*df.min().median()<0
     if through_zero:
-        lower, upper = (-lower, upper) if positive else (lower, -upper)
+        lower, upper = (-df.min().max()/2, upper) if positive else (lower, -df.max().min()/2)
     else:
-        mean = df.mean().mean()
+        mean = df.mean().mean() #Use Median?
         lower, upper = (mean+lower, upper) if positive else (lower, mean-upper)
     limit = lower if positive else upper
 
-    search_range = np.nonzero(column/limit>1)
+    search_range = np.nonzero(column/limit>1)[0]
+    if search_range.size == 0:
+        raise Exception('Bounds cannot be determined')
     left, right = np.min(search_range), np.max(search_range)
 
     return left, right, lower, upper

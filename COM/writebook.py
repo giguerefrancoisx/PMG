@@ -149,7 +149,7 @@ def writebook(chlist, directory, subdir='', safe=True):
 
     return data
 
-def writeHDF5(chlist, directory, subdir=''):
+def writeHDF5(directory, chlist):
     """
     Input:
     ----------
@@ -178,7 +178,7 @@ def writeHDF5(chlist, directory, subdir=''):
     here they can be access by openHDF5() in PMG.COM.openbook
     """
 
-    allfiles = os.listdir(directory+subdir)
+    allfiles = os.listdir(directory)
     csvfiles = []
     xlsonly = []
     for filename in allfiles:
@@ -195,7 +195,7 @@ def writeHDF5(chlist, directory, subdir=''):
         i = 1
         for filename in xlsonly:
 
-            testframe = pandas.read_excel(directory+subdir+'/'+filename,
+            testframe = pandas.read_excel(directory+'/'+filename,
                                           sheetname=None, header=0,
                                           index_col=0, skiprows=[1,2])
 
@@ -207,24 +207,24 @@ def writeHDF5(chlist, directory, subdir=''):
             end = int(numpy.searchsorted(testframe.loc[:,'T_10000_0'], 0.3999))+1
             testframe = testframe.iloc[start:end,:]
 
-            testframe.to_csv(directory+subdir+filename[:-4]+'.csv', index=False)
+            testframe.to_csv(directory+filename[:-4]+'.csv', index=False)
             per = i/count*100
             i = i+1
             print('{:.0f} % Complete'.format(per))
 
             csvfiles.append(filename[:-4]+'.csv')
 
-    with pandas.HDFStore(directory+subdir+'Tests.h5') as test_store,\
-         pandas.HDFStore(directory+subdir+'Channels.h5') as ch_store:
+    with pandas.HDFStore(directory+'Tests.h5') as test_store,\
+         pandas.HDFStore(directory+'Channels.h5') as ch_store:
 
         print('Reading csv:')
         count = len(csvfiles)
         i = 1
         for filename in csvfiles:
 
-            header = pandas.read_csv(directory+subdir+'/'+filename, nrows=0, dtype=numpy.float64)
+            header = pandas.read_csv(directory+'/'+filename, nrows=0, dtype=numpy.float64)
             cols = header.columns.intersection(chlist).tolist()+['T_10000_0']
-            testframe = pandas.read_csv(directory+subdir+'/'+filename, usecols=cols, dtype=numpy.float64)
+            testframe = pandas.read_csv(directory+'/'+filename, usecols=cols, dtype=numpy.float64)
 
             start = int(numpy.searchsorted(testframe.loc[:,'T_10000_0'], -0.01001))
             end = int(numpy.searchsorted(testframe.loc[:,'T_10000_0'], 0.3999))+1

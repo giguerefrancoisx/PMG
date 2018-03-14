@@ -55,7 +55,7 @@ tcns  = table.CIBLE.tolist()#table[table.CBL_BELT.isin(['SLIP','OK'])].CIBLE.tol
 #tcns = ['TC12-003','TC17-201','TC17-210','TC17-211','TC17-203','TC17-206','TC15-155','TC16-205','TC17-202','TC17-209','TC13-202','TC17-212','TC08-107','TC16-125','TC15-024','TC16-204','TC15-162','TC17-025','TC17-017','TC17-208','TC15-035','TC17-028','TC13-035','TC17-029','TC13-036','TC16-019','TC17-012','TC17-505','TC17-030','TC17-031','TC17-032','TC17-033']
 
 
-#writeHDF5(chlist, readdir)
+#writeHDF5(readdir, chlist)
 
 plot_thor(savedir, chlist, tcns)
 

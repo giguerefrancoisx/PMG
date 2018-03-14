@@ -95,3 +95,61 @@ for c, _ in enumerate(chlist[:4]):
         ax.set_ylim(bot, top)
 
 style.maximize()
+#%%
+r, c = 2, 2
+plt.close('all')
+fig, axs = style.subplots(r, c, sharex='all', sharey='col')
+axs = axs.reshape((r,c))
+
+ind = pd.concat([time, pd.Series(time.index)], axis=1).set_index('Time')
+
+for c, ch in enumerate(['11NECKLO00THFOXA', '11CHSTLEUPTHDSXB']):
+
+    r=0
+    group = bin1
+
+    ax = axs[0,c]
+    tcns = group.CIBLE.tolist()
+    points = np.array([])
+    values = np.array([])
+    points2 = np.array([])
+    values2 = np.array([])
+    for tcn in tcns:
+        point = group[group.CIBLE == tcn].T1.iloc[0]
+        point2 = group[group.CIBLE == tcn].T2.iloc[0]
+        index = ind.loc[point].iloc[0]
+        index2 = ind.loc[point2].iloc[0]
+        try:
+            value = fulldata[ch].loc[index, tcn]
+            value2 = fulldata[ch].loc[index2, tcn]
+        except KeyError:
+            value = np.nan
+            value2 = np.nan
+        points = np.append(points, point)
+        values = np.append(values, value)
+        points2 = np.append(points2, point2)
+        values2 = np.append(values2, value2)
+
+    df = fulldata[ch].loc[:,tcns]
+    ax.plot(time, df)
+    ax.plot(points, values, '.', color='b')
+    ax.plot(points2, values2, '.', color='r')
+
+    for line, tcn in zip(ax.lines, df.columns):
+        line.set_label(tcn)
+
+    axs[0,0].set_ylabel('Early Slip')
+
+    group = ok
+    ax = axs[1,c]
+    tcns = group.CIBLE.tolist()
+    df = fulldata[ch].loc[:,tcns]
+    ax.plot(time, df)
+
+    for line, tcn in zip(ax.lines, df.columns):
+            line.set_label(tcn)
+
+    axs[1,0].set_ylabel('OK Belts')
+    axs[0,c].set_title(ch)
+
+ax.set_xlim(0,0.2)
