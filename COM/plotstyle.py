@@ -58,8 +58,9 @@ def colordict(data, by='order', values=None):
     if isinstance(data, (pd.DataFrame, pd.Series)):
         if isinstance(data, pd.Series):
             data = pd.DataFrame(data).T
-        if by == 'max':
+        if by == 'max': #TODO Fix me to use 0-1 min to max and just reverse colormap
             maxlist = 1-(data.max()-data.max().min())/(data.max().max()-data.max().min())
+#            maxlist = (data.max().max()-data.max())/(data.max().max()-data.max().min())
             keys = maxlist.sort_values().index
             maxlist[np.isnan(maxlist)] = 0
             mapping = (maxlist[keys]*N).round(0).astype(int)

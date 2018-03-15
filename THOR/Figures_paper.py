@@ -224,4 +224,55 @@ if 0:
     axs[-1].spines['bottom'].set_edgecolor((0,0,0))
 
     plt.subplots_adjust(left=0.177, top=0.97, hspace=-overlap)
-#%%
+#%% SET UP SB FRACTION PLOTS
+columns = ['CIBLE','CBL_BELT','T1','T2','FRACTION']
+SB_table = table.loc[table.FRACTION.dropna().index,columns].set_index('CIBLE')
+#fraction = table.FRACTION
+df = fulldata['11NECKLO00THFOXA'].dropna(axis=1)
+SB_table['NECK'] = df.loc[:,SB_table.index].max()
+df = fulldata['11CHSTLEUPTHDSXB'].dropna(axis=1)
+SB_table['CHEST'] = df.loc[:,SB_table.index].min()
+
+SB_table['COLOR'] = SB_table['CBL_BELT'].apply(lambda x: ok_color if x=='OK' else slip_color)
+#%% incience - violin
+plt.close('all')
+plt.figure(figsize=(4,4))
+plt.scatter(SB_table['FRACTION'],SB_table['CBL_BELT'],marker='.',c=SB_table['COLOR'])
+violin = plt.violinplot([SB_table[SB_table.CBL_BELT.isin(['OK'])]['FRACTION'],SB_table[SB_table.CBL_BELT.isin(['SLIP'])]['FRACTION']],[0,1],vert=False,widths=[1.15,1.15],showmeans=True, bw_method=0.35)
+plt.ylim(-.75,1.75)
+plt.yticks((0,1),['OK','SLIP'])
+plt.xlim(0.47,1)
+violin['bodies'][0].set_color(ok_color)
+violin['bodies'][1].set_color(slip_color)
+#violin['cbars'].set_color([ok_color,slip_color])
+violin['cbars'].set_color((0.15,0.15,0.15))
+violin['cmeans'].set_color([ok_color,slip_color])
+violin['cmins'].set_color([ok_color,slip_color])
+violin['cmaxes'].set_color([ok_color,slip_color])
+plt.xlabel('Belt Position Relative to Neck')
+#%% incidence - hist
+plt.close('all')
+fig, axs = style.subplots(2,1,sharex='all', figsize=(4,4))
+ok_heights, bin_edges = np.histogram(SB_table[SB_table.CBL_BELT.isin(['OK'])]['FRACTION'], bins=np.linspace(0.5,1,20), density=True)
+axs[1].bar(bin_edges[:-1], ok_heights, width=np.diff(bin_edges)[0], color=ok_color, label='OK', alpha=0.5)
+slip_heights, bin_edges = np.histogram(SB_table[SB_table.CBL_BELT.isin(['SLIP'])]['FRACTION'], bins=np.linspace(0.5,1,20), density=True)
+axs[0].bar(bin_edges[:-1], -slip_heights, width=np.diff(bin_edges)[0], color=slip_color, label='SLIP', alpha=0.5)
+
+plt.xlim(0.47,1)
+plt.xlabel('Belt Position Relative to Neck')
+
+axs[0].text(-0.025, 0.5, 'SLIP', horizontalalignment='right', verticalalignment='center', transform=axs[0].transAxes)
+axs[1].text(-0.025, 0.5, 'OK', horizontalalignment='right', verticalalignment='center', transform=axs[1].transAxes)
+
+axs[0].tick_params(left='off', labelleft='off', bottom='off', labelbottom='off')
+axs[1].tick_params(left='off', labelleft='off')
+axs[0].spines['bottom'].set_visible(False)
+axs[1].spines['top'].set_visible(False)
+
+plt.subplots_adjust(hspace=0)
+#%% Neck Force
+plt.close('all')
+plt.figure()
+plt.scatter(SB_table['FRACTION'],SB_table['NECK'],marker='.',c=SB_table['COLOR'])
+#plt.figure()
+#plt.scatter(SB_table['FRACTION'],SB_table['CHEST'],marker='.',c=SB_table['COLOR'])
