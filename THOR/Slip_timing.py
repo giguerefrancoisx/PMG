@@ -124,10 +124,10 @@ bin1 = slip[(0.060<=slip.T1) & (slip.T1<0.075)]
 r, c = 2, 2
 plt.close('all')
 fig, axs = style.subplots(r, c, sharex='all', sharey='col', figsize=(6.5, 6.5))
-#axs = axs.reshape((r,c))
 
 ind = pd.concat([time, pd.Series(time.index)], axis=1).set_index('Time')
 chname = dict(zip(chlist, ['Lower Neck $F_x$', 'Upper Left Chest $D_x$']))
+alltcns = bin1.CIBLE.tolist()+ok.CIBLE.tolist()
 
 for c, (ch,group) in enumerate(zip(['11NECKLO00THFOXA', '11CHSTLEUPTHDSXB','11NECKLO00THFOXA', '11CHSTLEUPTHDSXB'],[bin1,bin1,ok,ok])):
 
@@ -135,13 +135,11 @@ for c, (ch,group) in enumerate(zip(['11NECKLO00THFOXA', '11CHSTLEUPTHDSXB','11NE
     tcns = group.CIBLE.tolist()
     df = fulldata[ch].loc[:,tcns]
     if c in [0,2]:
-        colors = style.colordict(fulldata[ch], 'max', plt.cm.viridis)
-#        vmin, vmax = fulldata[ch].max().min(), fulldata[ch].max().max()
-#        sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis_r, norm=plt.Normalize(vmin, vmax))
+        cmap = matplotlib.colors.LinearSegmentedColormap.from_list('custom', ['tab:red','tab:blue','tab:blue'], 256)
+        colors = style.colordict(fulldata[ch].loc[:,alltcns], 'max', cmap)
     if c in [1,3]:
-        colors = style.colordict(fulldata[ch], 'min', plt.cm.viridis_r)
-#        vmin, vmax = fulldata[ch].min().min(), fulldata[ch].min().max()
-#        sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis_r, norm=plt.Normalize(vmin, vmax))
+        cmap = matplotlib.colors.LinearSegmentedColormap.from_list('custom', ['tab:red','tab:red','tab:blue','tab:blue'], 256)
+        colors = style.colordict(fulldata[ch].loc[:,alltcns], 'min', cmap)
 
     for tcn in df.columns:
         ax.plot(time, df[tcn], color=colors[tcn])
@@ -171,10 +169,13 @@ for c, (ch,group) in enumerate(zip(['11NECKLO00THFOXA', '11CHSTLEUPTHDSXB','11NE
         axs[c].set_title(chname[ch])
     if c in [2,3]:
         axs[c].set_xlabel('Time [s]')
-#        sm._A = []
-#        cbar = plt.colorbar(sm, ax=ax, orientation='horizontal')
 
 axs[0].set_ylabel('Early Slip')
 axs[2].set_ylabel('No-Slip Belts')
+axs[-1].set_xlim(0,0.2)
+#%%
 
-ax.set_xlim(0,0.2)
+#vmin, vmax = fulldata[ch].min().min(), fulldata[ch].min().max()
+#sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin, vmax))
+#sm._A = []
+#cbar = plt.colorbar(sm, ax=ax, orientation='horizontal', pad=0.2)

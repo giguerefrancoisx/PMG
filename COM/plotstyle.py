@@ -12,7 +12,7 @@ import matplotlib.colors as clrs
 import matplotlib.pyplot as plt
 from PMG.COM.data import clean_outliers
 
-def colordict(data, by='order', values=None):
+def colordict(data, by='order', values=None, n_levels=None):
     """Creates a dictionary of color assignments based on an iterable or
     DataFrame.
 
@@ -52,45 +52,48 @@ def colordict(data, by='order', values=None):
     """
     if isinstance(values, clrs.LinearSegmentedColormap):
         N = values.N-1
+    elif isinstance(values, clrs.ListedColormap):
+        N = len(values.colors)-1
+    elif isinstance(values, list):
+        n_levels = len(values) if n_levels is None else n_levels
+        values = clrs.LinearSegmentedColormap.from_list('custom', values, n_levels)
+        N = values.N-1
     else:
-        N=1
+        N = 1 if values is None else len(values)
 
-    if isinstance(data, (pd.DataFrame, pd.Series)):
+    if isinstance(data, (pd.DataFrame, pd.Series, np.ndarray)):
         if isinstance(data, pd.Series):
             data = pd.DataFrame(data).T
-        if by == 'max': #TODO Fix me to use 0-1 min to max and just reverse colormap
-            maxlist = 1-(data.max()-data.max().min())/(data.max().max()-data.max().min())
-#            maxlist = (data.max().max()-data.max())/(data.max().max()-data.max().min())
-            keys = maxlist.sort_values().index
-            maxlist[np.isnan(maxlist)] = 0
-            mapping = (maxlist[keys]*N).round(0).astype(int)
-        elif by == 'min':
-            minlist = (data.min()-data.min().min())/(data.min().max()-data.min().min())
-            keys = minlist.sort_values().index
-            minlist[np.isnan(minlist)] = 0
-            mapping = (minlist[keys]*N).round(0).astype(int)
-        elif by == 'mean':
-            scale = 1-(data.mean()-data.mean().min())/(data.mean().max()-data.mean().min())
-            keys = scale.sort_values().index
-            scale[np.isnan(scale)] = 0
-            mapping = (scale[keys]*N).round(0).astype(int)
-        elif by == 'order':
+        if isinstance(data, np.ndarray):
+            data = pd.DataFrame(data)
+
+        if by == 'order':
             keys = data.columns
             mapping = np.arange(len(data.columns))*N//(len(data.columns)-1)
-        else:
+        elif by not in ['min', 'max', 'mean']:
             raise Exception('No other coloring methods implemented yet')
+        else:
+            if by == 'max':
+                scale = (data.max()-data.max().min())/(data.max().max()-data.max().min())
+            elif by == 'min':
+                scale = (data.min()-data.min().min())/(data.min().max()-data.min().min())
+            elif by == 'mean':
+                scale = (data.mean()-data.mean().min())/(data.mean().max()-data.mean().min())
+
+            scale = scale.sort_values()
+            keys = scale.index
+            scale[np.isnan(scale)] = 0
+            mapping = (scale*N).round(0).astype(int)
+
     else:
-        if by == 'max':
-            maxlist = (data-min(data))/(max(data)-min(data))
-            keys = np.flip(np.argsort(data), 0)
-            mapping = (maxlist[keys]*N).round(0).astype(int)
-        elif by == 'min':
-            minlist = (data-min(data))/(max(data)-min(data))
-            keys = np.argsort(data)
-            mapping = (minlist[keys]*N).round(0).astype(int)
+        if by in ['min','max','mean']:
+            scale = (data-min(data))/(max(data)-min(data))
+            scale.sort()
+            keys = np.arange(len(scale))
+            mapping = (scale*N).round(0).astype(int)
         elif by == 'order':
-            keys = data
-            mapping = np.arange(len(data))*N//(len(data)-1)
+            keys = np.arange(len(data))
+            mapping = keys*N//(len(data)-1)
         else:
             raise Exception('No other coloring methods implemented yet')
 
@@ -99,20 +102,10 @@ def colordict(data, by='order', values=None):
 
     if isinstance(values, clrs.ListedColormap):
         cmap = values
-        n_steps = len(cmap.colors)//len(keys)
-        if n_steps >= 1:
-            values = cmap.colors[::n_steps]
-        else:
-            values = cmap.colors
-        #values = camp.colors[mapping]
+        values = np.array(cmap.colors)[mapping.values]
 
     elif isinstance(values, clrs.LinearSegmentedColormap):
         cmap = values
-#        n_steps = cmap.N//len(keys)
-#        if n_steps >= 1:
-#            values = [cmap(n)[:3] for n in range(0, cmap.N, n_steps)]
-#        else:
-#            values = [cmap(n)[:3] for n in range(cmap.N)]
         values = [rgb[:3] for rgb in cmap(mapping)]
 
     if len(keys) > len(values):

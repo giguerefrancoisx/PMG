@@ -247,7 +247,8 @@ if __name__ == '__main__':
         plt.plot(df.loc[:,tcn], color=colors[tcn])
     #%%
     df = df.loc[:,slips+oks]
-    colors = style.colordict(df, 'max', None)#plt.cm.plasma)
+    colors = style.colordict(df, 'max', plt.cm.YlGnBu_r)
+    colors = style.colordict(df, 'max', ['tab:blue','tab:red'], 3)
     fig, axs = plt.subplots(1, 2, sharex=True, sharey=True)
     for ax, tcns in zip(axs, [slips, oks]):
         for tcn in tcns:

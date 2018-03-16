@@ -5,7 +5,7 @@ Created on Tue Mar 13 08:51:04 2018
 @author: giguerf
 """
 import numpy as np
-#import pandas as pd
+import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import PMG.COM.data as dat
@@ -23,6 +23,15 @@ slips  = table[table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
 oks = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
 
 plt.rcParams['font.size']= 10
+
+slip_color = 'tab:blue'
+ok_color = 'tab:red'
+
+cmap_neck = matplotlib.colors.LinearSegmentedColormap.from_list('custom', [ok_color,slip_color,slip_color], 256)
+colors_neck = style.colordict(fulldata['11NECKLO00THFOXA'].loc[:,slips+oks], 'max', cmap_neck)
+cmap_chst = matplotlib.colors.LinearSegmentedColormap.from_list('custom', [ok_color,ok_color,slip_color,slip_color], 256)
+colors_chst = style.colordict(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips+oks], 'min', cmap_chst)
+
 #%% Comparison of slip and ok traces for select channels
 #plt.close('all')
 #df = df.loc[:,slips+oks]
@@ -58,7 +67,7 @@ plt.rcParams['font.size']= 10
 #axs[2].set_xlabel('Time [s]')
 #axs[0].set_ylabel('Lower Neck $F_x$ [N]')
 #%% Comparison of slip and ok traces for select channels
-if 0:
+if 1:
     plt.close('all')
     chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB']
     labels = ['Lower Neck $\mathregular{F_x}$ [N]',
@@ -69,11 +78,61 @@ if 0:
     xfmt = matplotlib.ticker.ScalarFormatter(useMathText=True)
     xfmt.set_powerlimits((-3,4))
 
-    slip_color = 'tab:blue'
-    ok_color = 'tab:red'
     n = len(chlist)
 
     fig, axs = style.subplots(n, 2, sharex='all', sharey='row', figsize=(6.5,2*n))
+
+    for i, channel in enumerate(chlist):
+        df = fulldata[channel].dropna(axis=1)
+        df = df.loc[:,slips+oks]
+        for tcn in slips:
+            axs[0+2*i].plot(time, df.loc[:,tcn], color=slip_color, lw=1, label='Slip')
+        for tcn in oks:
+            axs[0+2*i].plot(time, df.loc[:,tcn], color=ok_color, lw=1, label='No-Slip')
+
+        window = 100
+        alpha = 0.10
+        slip_median = df.loc[:,slips].median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        ok_median = df.loc[:,oks].median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        slip_high = df.loc[:,slips].quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        slip_low = df.loc[:,slips].quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        ok_high = df.loc[:,oks].quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        ok_low = df.loc[:,oks].quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+
+
+        axs[1+2*i].plot(time, slip_median, color=slip_color, label='Median, n={}'.format(len(slips)))
+        axs[1+2*i].plot(time, ok_median, color=ok_color, label='Median, n={}'.format(len(oks)))
+        axs[1+2*i].fill_between(time, slip_high, slip_low, color=slip_color, alpha=0.2, label='{:2.0f}th Percentile'.format(100*(1-alpha)))
+        axs[1+2*i].fill_between(time, ok_high, ok_low, color=ok_color, alpha=0.2, label='{:2.0f}th Percentile'.format(100*(1-alpha)))
+    #    axs[1+2*i].legend(loc='lower right', fontsize=6)
+
+        axs[0+2*i].set_ylabel(ylabel[channel])
+        axs[0+2*i].yaxis.set_label_coords(-0.28,0.5)
+        axs[0+2*i].yaxis.set_major_formatter(xfmt)
+
+    axs[-1].set_xlim(0,0.3)
+    axs[-1].set_xlabel('Time [s]')
+    axs[-2].set_xlabel('Time [s]')
+
+    style.legend(axs[-2], loc='lower right', fontsize=6)
+    axs[-1].legend(loc='lower right', fontsize=6)
+
+    plt.tight_layout()
+#%% Comparison of slip and ok traces for select channels - box
+if 1:
+    plt.close('all')
+    chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB']
+    labels = ['Lower Neck $\mathregular{F_x}$ [N]',
+              'Lower Neck $\mathregular{F_y}$ [N]',
+              'Upper Left Chest $\mathregular{D_x}$ [mm]',
+              'Left Femur $\mathregular{F_x}$ [N]']
+    ylabel = dict(zip(chlist, labels))
+    xfmt = matplotlib.ticker.ScalarFormatter(useMathText=True)
+    xfmt.set_powerlimits((-3,4))
+
+    n = len(chlist)
+
+    fig, axs = style.subplots(n, 1, sharex='all', sharey='row', figsize=(6.5,2*n))
 
     for i, channel in enumerate(chlist):
         df = fulldata[channel].dropna(axis=1)
@@ -119,13 +178,10 @@ def bootstrap_resample(X, n=1):
         X_resample[i] = X[resample_i]
     return X_resample
 
-if 0:
+if 1:
     chlist = ['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA']
     #chlist = ['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA']
     chname = ['Head', 'Spine T1', 'Chest', 'Spine T12', 'Pelvis']
-
-    slip_color = 'tab:blue'
-    ok_color = 'tab:red'
 ###
     #ch = chlist[0]
     #df = fulldata[ch].dropna(axis=1).iloc[:,:20]
@@ -270,9 +326,101 @@ axs[0].spines['bottom'].set_visible(False)
 axs[1].spines['top'].set_visible(False)
 
 plt.subplots_adjust(hspace=0)
+#%% incidence hist 2 #TODO get more data and increase n_bins
+plt.close('all')
+plt.figure(figsize=(4,4))
+ax = plt.gca()
+ok_heights, bin_edges = np.histogram(SB_table[SB_table.CBL_BELT.isin(['OK'])]['FRACTION'], bins=np.linspace(0.5,1,10))
+ax.bar(bin_edges[:-1], ok_heights, width=np.diff(bin_edges)[0], color=ok_color, label='OK', alpha=0.5)
+slip_heights, bin_edges = np.histogram(SB_table[SB_table.CBL_BELT.isin(['SLIP'])]['FRACTION'], bins=np.linspace(0.5,1,10))
+ax.bar(bin_edges[:-1], slip_heights, width=np.diff(bin_edges)[0], color=slip_color, label='SLIP', alpha=0.5)
+ax.tick_params(left='off', labelleft='off')
+ax.legend(loc='upper right')
+plt.xlim(0.47,1)
+plt.xlabel('Belt Position Relative to Neck')
+plt.ylabel('Frequency')
+
+#plt.close('all')
+plt.figure(figsize=(4,4))
+ax = plt.gca()
+ok_heights, bin_edges = np.histogram(SB_table[SB_table.CBL_BELT.isin(['OK'])]['FRACTION'], bins=np.linspace(0.5,1,7))
+slip_heights, bin_edges = np.histogram(SB_table[SB_table.CBL_BELT.isin(['SLIP'])]['FRACTION'], bins=np.linspace(0.5,1,7))
+ax.bar(bin_edges[:-1], ok_heights/(slip_heights+ok_heights+0.00001), width=np.diff(bin_edges)[0], color=ok_color, label='OK', alpha=0.5)
+ax.bar(bin_edges[:-1], slip_heights/(slip_heights+ok_heights+0.00001), width=np.diff(bin_edges)[0], color=slip_color, label='SLIP', alpha=0.5)
+ax.tick_params(left='off', labelleft='off')
+ax.legend(loc='upper right')
+plt.xlim(0.47,1)
+plt.xlabel('Belt Position Relative to Neck')
+plt.ylim(0,1.25)
+plt.ylabel('Relative Frequency')
 #%% Neck Force
 plt.close('all')
 plt.figure()
 plt.scatter(SB_table['FRACTION'],SB_table['NECK'],marker='.',c=SB_table['COLOR'])
 #plt.figure()
 #plt.scatter(SB_table['FRACTION'],SB_table['CHEST'],marker='.',c=SB_table['COLOR'])
+#%% Time to Slip
+plt.close('all')
+plt.figure()
+notnull = ~SB_table['T1'].isin(['?'])
+plt.scatter(SB_table['FRACTION'][notnull],SB_table['T1'][notnull],marker='.',c=SB_table['COLOR'][notnull])
+#%% Slip timing
+ok, slip = tb.split(table, 'CBL_BELT', ['OK','SLIP']).values()
+slip = slip[~slip.T1.isnull() & ~slip.T1.isin(['?'])]
+bin1 = slip[(0.060<=slip.T1) & (slip.T1<0.075)]
+
+r, c = 2, 2
+plt.close('all')
+fig, axs = style.subplots(r, c, sharex='all', sharey='col', figsize=(6.5, 6.5))
+
+ind = pd.concat([time, pd.Series(time.index)], axis=1).set_index('Time')
+chlist = ['11NECKLO00THFOXA','11CHSTLEUPTHDSXB']
+chname = dict(zip(chlist, ['Lower Neck $F_x$', 'Upper Left Chest $D_x$']))
+#alltcns = bin1.CIBLE.tolist()+ok.CIBLE.tolist()
+
+for c, (ch,group) in enumerate(zip(['11NECKLO00THFOXA', '11CHSTLEUPTHDSXB','11NECKLO00THFOXA', '11CHSTLEUPTHDSXB'],[bin1,bin1,ok,ok])):
+
+    ax=axs[c]
+    tcns = group.CIBLE.tolist()
+    df = fulldata[ch].loc[:,tcns]
+    if c in [0,2]:
+#        cmap = matplotlib.colors.LinearSegmentedColormap.from_list('custom', ['tab:red','tab:blue','tab:blue'], 256)
+#        colors = style.colordict(fulldata[ch].loc[:,alltcns], 'max', cmap)
+        colors = colors_neck
+    if c in [1,3]:
+#        cmap = matplotlib.colors.LinearSegmentedColormap.from_list('custom', ['tab:red','tab:red','tab:blue','tab:blue'], 256)
+#        colors = style.colordict(fulldata[ch].loc[:,alltcns], 'min', cmap)
+        colors = colors_chst
+
+    for tcn in df.columns:
+        ax.plot(time, df[tcn], color=colors[tcn])
+
+    if c in [0,1]:
+        points = np.array([])
+        values = np.array([])
+        points2 = np.array([])
+        values2 = np.array([])
+        for tcn in tcns:
+            point = group[group.CIBLE == tcn].T1.iloc[0]
+            point2 = group[group.CIBLE == tcn].T2.iloc[0]
+            index = ind.loc[point].iloc[0]
+            index2 = ind.loc[point2].iloc[0]
+            try:
+                value = fulldata[ch].loc[index, tcn]
+                value2 = fulldata[ch].loc[index2, tcn]
+            except KeyError:
+                value = np.nan
+                value2 = np.nan
+            points = np.append(points, point)
+            values = np.append(values, value)
+            points2 = np.append(points2, point2)
+            values2 = np.append(values2, value2)
+        ax.plot(points, values, '.', color='b')
+        ax.plot(points2, values2, '.', color='r')
+        axs[c].set_title(chname[ch])
+    if c in [2,3]:
+        axs[c].set_xlabel('Time [s]')
+
+axs[0].set_ylabel('Early Slip')
+axs[2].set_ylabel('No-Slip Belts')
+axs[-1].set_xlim(0,0.2)
