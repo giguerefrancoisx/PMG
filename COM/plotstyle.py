@@ -65,7 +65,10 @@ def colordict(data, by='order', values=None, n_levels=None):
         if isinstance(data, pd.Series):
             data = pd.DataFrame(data).T
         if isinstance(data, np.ndarray):
-            data = pd.DataFrame(data)
+            if np.ndim(data)==1:
+                data = pd.DataFrame(data).T
+            else:
+                data = pd.DataFrame(data)
 
         if by == 'order':
             keys = data.columns
@@ -102,7 +105,7 @@ def colordict(data, by='order', values=None, n_levels=None):
 
     if isinstance(values, clrs.ListedColormap):
         cmap = values
-        values = np.array(cmap.colors)[mapping.values]
+        values = np.array(cmap.colors)[mapping] #removed '.values', move to mapping assign if necessary
 
     elif isinstance(values, clrs.LinearSegmentedColormap):
         cmap = values

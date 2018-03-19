@@ -14,21 +14,15 @@ def plotbook(savedir, chlist, tcns=None):
     """
     import pandas as pd
     import matplotlib.pyplot as plt
-#    from PMG.COM import openbook as ob
-    from PMG.COM import plotstyle as style
-    from PMG.COM import data
+    from PMG.COM import plotstyle as style, data, table as tb
 
     descriptions = pd.read_excel('P:/AHEC/Descriptions.xlsx', index_col = 0)
     description = descriptions.to_dict()[descriptions.columns[0]]
-
-#    time, categories = ob.thor(chlist, tcns)
-#    slip, ok = categories['SLIP'], categories['OK']
 
     time, fulldata = data.import_data('P:/AHEC/DATA/THOR/', chlist, tcns, check=False)
     for k,v in fulldata.items():
         fulldata[k] = data.check_and_clean(v, stage=2)
 
-    import PMG.COM.table as tb
     table = tb.get('THOR')
     table = table[table.CIBLE.isin(tcns)]
     slips  = table[table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
@@ -83,7 +77,6 @@ def plotbook(savedir, chlist, tcns=None):
         slipstats = data.stats(slipdf)
         okstats = data.stats(okdf)
 
-#        ylim = style.ylim_no_outliers([slipdf, okdf])
         ylabel = style.ylabel(channel[12:14], channel[14:15])
 
         fig = plt.figure('Belt: '+channel, figsize=(20, 12.5))
@@ -94,7 +87,6 @@ def plotbook(savedir, chlist, tcns=None):
         ax = plt.subplot(2,2,1)
         plt.plot(time, slipdf, '.', color = 'tab:blue', markersize=0.5, label = 'n = {}'.format(slipdf.shape[1]))
         plt.xlim(*xlim)
-#        ax.set_ylim(*ylim)
         plt.title('Slipping Belts')
         plt.ylabel(ylabel)
         plt.xlabel(xlabel)
@@ -104,7 +96,6 @@ def plotbook(savedir, chlist, tcns=None):
         plt.subplot(2,2,3, sharey = ax)
         plt.plot(time, okdf, '.', color = 'tab:orange', markersize=0.5, label = 'n = {}'.format(okdf.shape[1]))
         plt.xlim(*xlim)
-#        ax.set_ylim(*ylim)
         plt.title('Ok Belts')
         plt.ylabel(ylabel)
         plt.xlabel(xlabel)
@@ -114,16 +105,17 @@ def plotbook(savedir, chlist, tcns=None):
         plt.subplot(2,2,2, sharey = ax)
         plt.plot(time, slipdf.median(axis=1).rolling(100,0,center=True,win_type='parzen').mean(), color='tab:blue', label='Median (Slip), n = {}'.format(slipdf.shape[1]))
         plt.plot(time, slipstats['Mean-between'], color='tab:purple', label='Mean-between (Slip), n = {}'.format(0))
-        plt.fill_between(time, slipstats['High'], slipstats['Low'], color='tab:blue', alpha=0.25, label='Intervals (Slip)')
+        plt.fill_between(time, slipstats['High'], slipstats['Low'], color='tab:blue', alpha=0.25, label='80th Percentile (Slip)')
+#        ax = plt.gca()
+#        data.tolerance(ax, time, slipdf, 'tab:blue')
         plt.plot(time, okdf.median(axis=1).rolling(100,0,center=True,win_type='parzen').mean(), color='tab:orange', label='Median (Ok), n = {}'.format(okdf.shape[1]))
         plt.plot(time, okstats['Mean-between'], color='tab:red', label='Mean-between (Ok), n = {}'.format(0))
-        plt.fill_between(time, okstats['High'], okstats['Low'], color='tab:orange', alpha=0.25, label='Intervals (Ok)')
+        plt.fill_between(time, okstats['High'], okstats['Low'], color='tab:orange', alpha=0.25, label='80th Percentile (Ok)')
         plt.xlim(*xlim)
-#        ax.set_ylim(*ylim)
         plt.title('All Belts (Mean and Intervals)')
         plt.ylabel(ylabel)
         plt.xlabel(xlabel)
-        plt.legend(loc = 4)
+        plt.legend(loc=4)
 
         plt.subplots_adjust(top=0.893, bottom=0.060, left=0.048, right=0.974, hspace=0.222, wspace=0.128)
         plt.savefig(savedir+'Belt_'+channel+'.png', dpi=200)

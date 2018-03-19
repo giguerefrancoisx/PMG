@@ -291,6 +291,7 @@ def clean_outliers(data, stage): #TODO - restrict to range (eg: before 200ms)
     if stage == 2:
         """This stage should take accurate but unruly data and remove out-of-the-ordinary traces"""
 
+        pass
         ### 4-Sigma deviation cummulative Method
 #        data_sum = ((data.T-data.median(axis=1)).T.abs()**0.5).cumsum()
 #        high = data_sum.mean(axis=1)+3*data_sum.std(axis=1)
@@ -351,6 +352,17 @@ def check_and_clean(raw, stage):
             print('outlier(s) ignored: '+', '.join(outliers.columns.tolist())+'\n')
 
     return clean
+
+def tolerance(ax, time, df, color):
+    quantiles = np.arange(0,5+1,1)/5*0.2
+    ax.plot(time, df.median(axis=1).rolling(100, 0, center=True, win_type='parzen').mean(),
+            color=color, label='Median, n = {}'.format(df.shape[1]))
+    for i, alpha in enumerate(quantiles):
+        ax.fill_between(time, df.quantile(alpha/2, axis=1).rolling(100, 0, center=True, win_type='parzen').mean(),
+                         df.quantile(1-alpha/2, axis=1).rolling(100, 0, center=True, win_type='parzen').mean(),
+                         alpha=0.15, color=color, lw=0)
+    ax.fill_between(time, float('nan'), float('nan'), color=color, alpha=0.25,
+                    label='80th-100th Percentiles')
 
 #def stats(df):
 #    alpha = 0.2 #0.05 = 95% coverage. Cannot be 0 or 1

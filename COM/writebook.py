@@ -157,9 +157,6 @@ def writeHDF5(directory, chlist):
         list of channels (ISO codes) to pull
     directory : string
         absolute path to data folder
-    subdir : string, default empty string
-        subfolders to open.\n
-        DEPRECATED. PASS ENTIRE PATH TO 'directory'
 
     Output:
     ----------
