@@ -18,7 +18,7 @@ savedir = os.fspath('P:/AHEC/Plots/THOR/')
 chlist = []
 chlist.extend(codestring('10??????00??AC[!R]?'))
 chlist.extend(codestring('11SEBE????B?????'))
-chlist.extend(codestring('11CHST0000THACX?'))
+chlist.extend(codestring('11CHST0000THAC[X,Y]?'))
 #chlist.extend(codestring('11CHST????THDC0?'))
 chlist.extend(codestring('11CHST????THDSX?'))
 #chlist.extend(codestring('11SPIN??00THACX?'))
@@ -40,7 +40,7 @@ chlist = sorted(set(chlist))
 #%%
 import PMG.COM.table as tb
 table = tb.get('THOR')
-table = table[table.TYPE.isin(['Frontale/Véhicule'])]
+table = table[table.TYPE.isin(['Frontale/Véhicule']) & (table.VITESSE==48)]
 
 
 tcns = None

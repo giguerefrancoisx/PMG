@@ -20,8 +20,8 @@ def plotbook(savedir, chlist, tcns=None):
     description = descriptions.to_dict()[descriptions.columns[0]]
 
     time, fulldata = data.import_data('P:/AHEC/DATA/THOR/', chlist, tcns, check=False)
-    for k,v in fulldata.items():
-        fulldata[k] = data.check_and_clean(v, stage=2)
+#    for k,v in fulldata.items():
+#        fulldata[k] = data.check_and_clean(v, stage=2)
 
     table = tb.get('THOR')
     table = table[table.CIBLE.isin(tcns)]
@@ -42,7 +42,7 @@ def plotbook(savedir, chlist, tcns=None):
 
         if plotdata.empty:
             continue
-#        ylim = style.ylim_no_outliers(plotdata)
+
         ylabel = style.ylabel(channel[12:14], channel[14:15])
 
         r, c = style.sqfactors(len(plotdata.columns.tolist()))
@@ -55,7 +55,6 @@ def plotbook(savedir, chlist, tcns=None):
             ax = axs[i]
             ax.plot(time, plotdata.loc[:, tcn], color = 'tab:green', label = tcn)
             ax.set_xlim(*xlim)
-#            ax.set_ylim(*ylim)
 
             title = ' '.join([tcn,table[table.CIBLE==tcn].CBL_MODELE.tolist()[0]])
             ax.set_title(title)
@@ -74,49 +73,41 @@ def plotbook(savedir, chlist, tcns=None):
 
         slipdf = fulldata[channel].loc[:,slips]
         okdf = fulldata[channel].loc[:,oks]
-        slipstats = data.stats(slipdf)
-        okstats = data.stats(okdf)
 
         ylabel = style.ylabel(channel[12:14], channel[14:15])
 
-        fig = plt.figure('Belt: '+channel, figsize=(20, 12.5))
+        fig, axs = style.subplots(2,2,sharex='all',sharey='all', num='Belt: '+channel, figsize=(20, 12.5))
         fig.suptitle('{ch} - {desc}'.format(ch = channel,
                      desc = description.get(channel, 'Description Unavailable')))
 
         #FIRST SUBPLOT - 'SLIP' Group full data set
-        ax = plt.subplot(2,2,1)
-        plt.plot(time, slipdf, '.', color = 'tab:blue', markersize=0.5, label = 'n = {}'.format(slipdf.shape[1]))
-        plt.xlim(*xlim)
-        plt.title('Slipping Belts')
-        plt.ylabel(ylabel)
-        plt.xlabel(xlabel)
-        style.legend(ax=plt.gca(), loc=4)
+        ax = axs[0]
+        ax.plot(time, slipdf, lw=1, color = 'tab:blue', label = 'n = {}'.format(slipdf.shape[1]))
+        ax.set_title('Slipping Belts')
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
+        style.legend(ax, loc=4)
 
         #THIRD SUBPLOT - 'OK' Group full data set
-        plt.subplot(2,2,3, sharey = ax)
-        plt.plot(time, okdf, '.', color = 'tab:orange', markersize=0.5, label = 'n = {}'.format(okdf.shape[1]))
-        plt.xlim(*xlim)
-        plt.title('Ok Belts')
-        plt.ylabel(ylabel)
-        plt.xlabel(xlabel)
-        style.legend(ax=plt.gca(), loc=4)
+        ax = axs[2]
+        ax.plot(time, okdf, lw=1, color = 'tab:orange', label = 'n = {}'.format(okdf.shape[1]))
+        ax.set_title('Ok Belts')
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
+        style.legend(ax, loc=4)
 
-        #FOURTH SUBPLOT - 'CIBLE' vs 'BELIER' Groups (mean and intervals)
-        plt.subplot(2,2,2, sharey = ax)
-        plt.plot(time, slipdf.median(axis=1).rolling(100,0,center=True,win_type='parzen').mean(), color='tab:blue', label='Median (Slip), n = {}'.format(slipdf.shape[1]))
-        plt.plot(time, slipstats['Mean-between'], color='tab:purple', label='Mean-between (Slip), n = {}'.format(0))
-        plt.fill_between(time, slipstats['High'], slipstats['Low'], color='tab:blue', alpha=0.25, label='80th Percentile (Slip)')
-#        ax = plt.gca()
-#        data.tolerance(ax, time, slipdf, 'tab:blue')
-        plt.plot(time, okdf.median(axis=1).rolling(100,0,center=True,win_type='parzen').mean(), color='tab:orange', label='Median (Ok), n = {}'.format(okdf.shape[1]))
-        plt.plot(time, okstats['Mean-between'], color='tab:red', label='Mean-between (Ok), n = {}'.format(0))
-        plt.fill_between(time, okstats['High'], okstats['Low'], color='tab:orange', alpha=0.25, label='80th Percentile (Ok)')
-        plt.xlim(*xlim)
-        plt.title('All Belts (Mean and Intervals)')
-        plt.ylabel(ylabel)
-        plt.xlabel(xlabel)
-        plt.legend(loc=4)
+        #SECOND SUBPLOT - 'CIBLE' vs 'BELIER' Groups (median and intervals)
+        ax = axs[1]
+        data.tolerance(ax, time, slipdf, 'tab:blue')
+        data.tolerance(ax, time, okdf, 'tab:orange')
 
+        ax.set_title('All Belts (Mean and Intervals)')
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
+        ax.legend(loc=4)
+
+        ax.set_xlim(*xlim)
+#%%
         plt.subplots_adjust(top=0.893, bottom=0.060, left=0.048, right=0.974, hspace=0.222, wspace=0.128)
         plt.savefig(savedir+'Belt_'+channel+'.png', dpi=200)
         plt.close('all')

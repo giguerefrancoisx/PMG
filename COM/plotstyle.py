@@ -206,6 +206,13 @@ def isinvalid(share):
     else:
         return False
 
+def hist(ax, values, bins=None, **kwargs):
+    if bins is None:
+        bins = np.linspace(min(values), max(values), 10)
+    heights, bin_edges = np.histogram(values, bins=bins, normed=True)
+    bars = ax.bar(bin_edges[:-1], heights, width=np.diff(bin_edges)[0], **kwargs)
+    return bars
+
 def sqfactors(n, axratio=1, figratio=1.6):
     """
     Returns the squarest grid arrangement r x c for n items

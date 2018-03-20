@@ -290,7 +290,13 @@ def clean_outliers(data, stage): #TODO - restrict to range (eg: before 200ms)
 
     if stage == 2:
         """This stage should take accurate but unruly data and remove out-of-the-ordinary traces"""
-
+#        med = med = data.median(axis=1)
+#        high = (med+2*(data.max(axis=1)-med)).rolling(300,0,center=True,win_type='parzen').mean()
+#        low = (med+2*(data.min(axis=1)-med)).rolling(300,0,center=True,win_type='parzen').mean()
+#        too_high = ((data.T>high).T.sum()>5).nonzero()[0]
+#        too_low = ((data.T<low).T.sum()>5).nonzero()[0]
+#        out = np.unique(np.hstack([too_high,too_low]))
+#        data = data.drop(data.columns[out], axis=1)
         pass
         ### 4-Sigma deviation cummulative Method
 #        data_sum = ((data.T-data.median(axis=1)).T.abs()**0.5).cumsum()
@@ -332,11 +338,12 @@ def check_and_clean(raw, stage):
     clean_outliers(). Prompts the user for whether a plot highlighting the
     outliers should be shown. Options are to retain or discard the outliers.
     """
-    clean = clean_outliers(raw, stage)
+    clean = clean_outliers(raw,  stage)
     outliers = pd.concat([raw, clean], axis=1).T.drop_duplicates(keep=False).T
 
     if not outliers.empty:
         action = input("Outliers have been detected.\nview: 'y' \ndiscard: any\nretain: 'keep'\n>>>")
+        print(action)
         if action == 'y':
             plt.figure()
             plt.plot(clean, alpha=0.25)
@@ -354,15 +361,15 @@ def check_and_clean(raw, stage):
     return clean
 
 def tolerance(ax, time, df, color):
-    quantiles = np.arange(0,5+1,1)/5*0.2
+    quantiles = np.array([0.2,0.05])#np.arange(0,2+1,1)/2*0.2
     ax.plot(time, df.median(axis=1).rolling(100, 0, center=True, win_type='parzen').mean(),
             color=color, label='Median, n = {}'.format(df.shape[1]))
     for i, alpha in enumerate(quantiles):
         ax.fill_between(time, df.quantile(alpha/2, axis=1).rolling(100, 0, center=True, win_type='parzen').mean(),
                          df.quantile(1-alpha/2, axis=1).rolling(100, 0, center=True, win_type='parzen').mean(),
-                         alpha=0.15, color=color, lw=0)
+                         alpha=0.20, color=color, lw=0)
     ax.fill_between(time, float('nan'), float('nan'), color=color, alpha=0.25,
-                    label='80th-100th Percentiles')
+                    label='80th-95th Percentiles')
 
 #def stats(df):
 #    alpha = 0.2 #0.05 = 95% coverage. Cannot be 0 or 1
