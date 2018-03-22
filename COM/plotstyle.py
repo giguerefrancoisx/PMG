@@ -95,8 +95,11 @@ def colordict(data, by='order', values=None, n_levels=None):
             keys = np.arange(len(scale))
             mapping = (scale*N).round(0).astype(int)
         elif by == 'order':
-            keys = np.arange(len(data))
-            mapping = keys*N//(len(data)-1)
+            if isinstance(data[0], str):
+                keys = data
+            else:
+                keys = np.arange(len(data))
+            mapping = np.arange(len(data))*N//(len(data)-1)
         else:
             raise Exception('No other coloring methods implemented yet')
 

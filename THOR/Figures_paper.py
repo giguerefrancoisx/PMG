@@ -13,9 +13,10 @@ import PMG.COM.table as tb
 import PMG.COM.plotstyle as style
 THOR = 'P:/AHEC/Data/THOR/'
 chlist = []
-chlist.extend(['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB'])
+chlist.extend(['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB','11CHSTRILOTHDSXB'])
 chlist.extend(['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA'])
 chlist.extend(['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA'])
+chlist.extend(['11SPIN0100THACYC','11THSP0100THAVXA','11THSP0100THAVZA'])
 time, fulldata = dat.import_data(THOR, chlist, check=False)
 table = tb.get('THOR')
 table = table[table.TYPE.isin(['Frontale/Véhicule'])]
@@ -33,7 +34,7 @@ cmap_chst = matplotlib.colors.LinearSegmentedColormap.from_list('custom', [ok_co
 colors_chst = style.colordict(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips+oks], 'min', cmap_chst)
 
 #%% FIGURE - DIFFERENCE IN RESPONSE BETWEEN SLIP/OK
-if 1:
+if 0:
     plt.close('all')
     chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB']
     labels = ['Lower Neck $\mathregular{F_x}$ [N]',
@@ -135,7 +136,7 @@ if 1:
 #    axs[-1].legend(loc='lower right', fontsize=6)
 #
 #    plt.tight_layout()
-#%% FIGURE - BOOTSRAPPED TIME TO PEAK
+#%% FIGURE - BOOTSTRAPPED TIME TO PEAK - HISTOGRAM
 def bootstrap_resample(X, n=1):
     X_resample = np.zeros((n,len(X)))
     for i in range(n):
@@ -143,7 +144,7 @@ def bootstrap_resample(X, n=1):
         X_resample[i] = X[resample_i]
     return X_resample
 
-if 1:
+if 0:
     chlist = ['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA']
     #chlist = ['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA']
     chname = ['Head', 'Spine T1', 'Chest', 'Spine T12', 'Pelvis']
@@ -200,6 +201,128 @@ if 1:
     axs[-1].spines['bottom'].set_edgecolor((0,0,0))
 
     plt.subplots_adjust(left=0.177, top=0.97, hspace=-overlap)
+#%% FIGURE - BOOTSTRAPPED TIME TO PEAK - BOXPLOT
+if 0:
+    chlist = ['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA']
+#    chlist = ['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA']
+    chname = ['Head', 'Spine T1', 'Chest', 'Spine T12', 'Pelvis']
+
+    allpeaks = {}
+    alltimes = {}
+    for ch in chlist:
+        for group, label in zip([slips, oks], ['Slip', 'No-Slip']):
+            df = fulldata[ch].dropna(axis=1).loc[:,group].dropna(axis=1)
+            sm = df#dat.smooth_peaks(df)
+            allpeaks[ch+label], alltimes[ch+label] = dat.find_peak(sm, time)
+
+    colors = dict(zip(['Slip', 'No-Slip'], [slip_color, ok_color]))
+
+    plt.close('all')
+    fig, axs = style.subplots(len(chlist), 1, sharex='all', sharey='all', figsize=(5,5), visible=False)
+
+    for i, (ch, name) in enumerate(zip(chlist, chname)):
+
+        df = fulldata[ch].dropna(axis=1).loc[:,slips].dropna(axis=1)
+        peaks, times = allpeaks[ch+'Slip'], alltimes[ch+'Slip']
+        x1_r = bootstrap_resample(times.values, n=5000)
+        means_slip = x1_r.mean(axis=1)
+
+        df = fulldata[ch].dropna(axis=1).loc[:,oks].dropna(axis=1)
+        peaks, times = allpeaks[ch+'No-Slip'], alltimes[ch+'No-Slip']
+        x1_r = bootstrap_resample(times.values, n=5000)
+        means_ok = x1_r.mean(axis=1)
+
+        means = np.vstack((means_ok,means_slip)).T
+        props = axs[i].boxplot(means, vert=False, whis='range', widths=0.75, patch_artist=True)
+        for patch, color in zip(props['boxes'], [ok_color, slip_color]):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.5)
+        for line in props['medians']:
+            line.set_color((0.25,0.25,0.25))
+
+    for color, label in zip([slip_color, ok_color], ['Slip', 'No-Slip']):
+        axs[-1].fill_between(np.array([np.nan]),np.array([np.nan]),np.array([np.nan]), color=color, label=label, alpha=0.5)
+    axs[-1].legend(loc='lower right')
+
+    axs[-1].set_ylim(0.5,2.5)
+    axs[-1].set_xlim(0.060,0.11)
+#    axs[-1].set_xlim(0.05,0.115)#axs[-1].set_xlim(0.045,0.16) #without head/with head
+    axs[-1].set_xlabel('Time [s]')
+    plt.tight_layout()
+
+    for ax, name in zip(axs, chname):
+        ax.text(-0.01, 0.5, name, horizontalalignment='right', verticalalignment='center', transform=ax.transAxes)
+        ax.patch.set_alpha(0)
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_edgecolor((0.85,0.85,0.85))
+        ax.tick_params(left='off', labelleft='off', bottom='off')
+
+    axs[0].spines['top'].set_visible(True)
+    axs[-1].tick_params(bottom='on')
+    axs[-1].spines['bottom'].set_edgecolor((0,0,0))
+
+    plt.subplots_adjust(left=0.177, top=0.97, hspace=0)
+#%% FIGURE - BOOTSTRAPPED PEAK - BOXPLOT
+if 0:
+    chlist = ['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA']
+#    chlist = ['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA']
+    chname = ['Head', 'Spine T1', 'Chest', 'Spine T12', 'Pelvis']
+
+    allpeaks = {}
+    alltimes = {}
+    for ch in chlist:
+        for group, label in zip([slips, oks], ['Slip', 'No-Slip']):
+            df = fulldata[ch].dropna(axis=1).loc[:,group].dropna(axis=1)
+            sm = df#dat.smooth_peaks(df)
+            allpeaks[ch+label], alltimes[ch+label] = dat.find_peak(sm, time)
+
+    colors = dict(zip(['Slip', 'No-Slip'], [slip_color, ok_color]))
+
+    plt.close('all')
+    fig, axs = style.subplots(len(chlist), 1, sharex='all', sharey='all', figsize=(5,5), visible=False)
+
+    for i, (ch, name) in enumerate(zip(chlist, chname)):
+
+        df = fulldata[ch].dropna(axis=1).loc[:,slips].dropna(axis=1)
+        peaks, times = allpeaks[ch+'Slip'], alltimes[ch+'Slip']
+        x1_r = bootstrap_resample(peaks.values, n=5000)
+        means_slip = x1_r.mean(axis=1)
+
+        df = fulldata[ch].dropna(axis=1).loc[:,oks].dropna(axis=1)
+        peaks, times = allpeaks[ch+'No-Slip'], alltimes[ch+'No-Slip']
+        x1_r = bootstrap_resample(peaks.values, n=5000)
+        means_ok = x1_r.mean(axis=1)
+
+        means = np.vstack((means_ok,means_slip)).T
+        props = axs[i].boxplot(means, vert=False, whis='range', widths=0.75, patch_artist=True)
+        for patch, color in zip(props['boxes'], [ok_color, slip_color]):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.5)
+        for line in props['medians']:
+            line.set_color((0.25,0.25,0.25))
+
+    for color, label in zip([slip_color, ok_color], ['Slip', 'No-Slip']):
+        axs[-1].fill_between(np.array([np.nan]),np.array([np.nan]),np.array([np.nan]), color=color, label=label, alpha=0.5)
+    axs[-1].legend(loc='lower left')
+
+    axs[-1].set_ylim(0.5,2.5)
+    axs[-1].set_xlim(-85,-25)
+#    axs[-1].set_xlim(7.5,27.5)
+    axs[-1].set_xlabel('Acceleration [g]')
+    plt.tight_layout()
+
+    for ax, name in zip(axs, chname):
+        ax.text(-0.01, 0.5, name, horizontalalignment='right', verticalalignment='center', transform=ax.transAxes)
+        ax.patch.set_alpha(0)
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_edgecolor((0.85,0.85,0.85))
+        ax.tick_params(left='off', labelleft='off', bottom='off')
+
+    axs[0].spines['top'].set_visible(True)
+    axs[-1].tick_params(bottom='on')
+    axs[-1].spines['bottom'].set_edgecolor((0,0,0))
+
+    plt.subplots_adjust(left=0.177, top=0.97, hspace=0)
 #%% FIGURES - SEAT BELT POSITION FRACTION
 columns = ['CIBLE','CBL_BELT','T1','T2','FRACTION']
 SB_table = table.loc[table.FRACTION.dropna().index,columns].set_index('CIBLE')
@@ -247,10 +370,6 @@ plt.subplots_adjust(hspace=0)
 plt.close('all')
 plt.figure(figsize=(4,4))
 ax = plt.gca()
-#ok_heights, bin_edges = np.histogram(SB_table[SB_table.CBL_BELT.isin(['OK'])]['FRACTION'], bins=np.linspace(0.5,1,10))
-#ax.bar(bin_edges[:-1], ok_heights, width=np.diff(bin_edges)[0], color=ok_color, label='OK', alpha=0.5)
-#slip_heights, bin_edges = np.histogram(SB_table[SB_table.CBL_BELT.isin(['SLIP'])]['FRACTION'], bins=np.linspace(0.5,1,10))
-#ax.bar(bin_edges[:-1], slip_heights, width=np.diff(bin_edges)[0], color=slip_color, label='SLIP', alpha=0.5)
 style.hist(ax, SB_table[SB_table.CBL_BELT.isin(['OK'])]['FRACTION'], bins=np.linspace(0.5,1,10), color=ok_color, label='OK', alpha=0.5)
 style.hist(ax, SB_table[SB_table.CBL_BELT.isin(['SLIP'])]['FRACTION'], bins=np.linspace(0.5,1,10), color=slip_color, label='SLIP', alpha=0.5)
 
@@ -286,44 +405,166 @@ plt.figure()
 notnull = ~SB_table['T1'].isin(['?'])
 plt.scatter(SB_table['FRACTION'][notnull],SB_table['T1'][notnull],marker='.',c=SB_table['COLOR'][notnull])
 #%% FIGURE - TIME TO BELT SLIP VS NECK/CHEST RESPONSE
-ok, slip = tb.split(table, 'CBL_BELT', ['OK','SLIP']).values()
-slip = slip[~slip.T1.isnull() & ~slip.T1.isin(['?'])]
-bin1 = slip[(0.060<=slip.T1) & (slip.T1<0.075)]
+if 0:
+    ok, slip = tb.split(table, 'CBL_BELT', ['OK','SLIP']).values()
+    slip = slip[~slip.T1.isnull() & ~slip.T1.isin(['?'])]
+    bin1 = slip[(0.060<=slip.T1) & (slip.T1<0.075)]
 
-r, c = 2, 2
-plt.close('all')
-fig, axs = style.subplots(r, c, sharex='all', sharey='col', figsize=(6.5, 6.5))
+    plt.close('all')
+    fig, axs = style.subplots(2, 2, sharex='all', sharey='col', figsize=(6.5, 6.5))
 
-ind = pd.concat([time, pd.Series(time.index)], axis=1).set_index('Time')
-chlist = ['11NECKLO00THFOXA','11CHSTLEUPTHDSXB']
-chname = dict(zip(chlist, ['Lower Neck $F_x$', 'Upper Left Chest $D_x$']))
+    ind = pd.concat([time, pd.Series(time.index)], axis=1).set_index('Time')
+    chlist = ['11NECKLO00THFOXA','11CHSTLEUPTHDSXB']
+    chname = dict(zip(chlist, ['Lower Neck $F_x$', 'Upper Left Chest $D_x$']))
 
-for c, (ch,group) in enumerate(zip(['11NECKLO00THFOXA', '11CHSTLEUPTHDSXB','11NECKLO00THFOXA', '11CHSTLEUPTHDSXB'],[bin1,bin1,ok,ok])):
+    for c, (ch,group) in enumerate(zip(['11NECKLO00THFOXA', '11CHSTLEUPTHDSXB','11NECKLO00THFOXA', '11CHSTLEUPTHDSXB'],[bin1,bin1,ok,ok])):
 
-    ax=axs[c]
-    tcns = group.CIBLE.tolist()
-    df = fulldata[ch].loc[:,tcns]
-    if c in [0,2]:
-        colors = colors_neck
-    if c in [1,3]:
-        colors = colors_chst
+        ax=axs[c]
+        tcns = group.CIBLE.tolist()
+        df = fulldata[ch].loc[:,tcns]
+        if c in [0,2]:
+            colors = colors_neck
+        if c in [1,3]:
+            colors = colors_chst
 
-    for tcn in df.columns:
-        ax.plot(time, df[tcn], color=colors[tcn])
+        for tcn in df.columns:
+            ax.plot(time, df[tcn], color=colors[tcn])
 
-    if c in [0,1]:
-        tab = group.set_index('CIBLE')
-        points = tab.loc[tcns].T1
-        points2 = tab.loc[tcns].T2
-        values = np.diagonal(df.loc[(points*10000+100).values.astype(int),points.index])
-        values2 = np.diagonal(df.loc[(points2*10000+100).values.astype(int),points2.index])
+        if c in [0,1]:
+            tab = group.set_index('CIBLE')
+            points = tab.loc[tcns].T1
+            points2 = tab.loc[tcns].T2
+            values = np.diagonal(df.loc[(points*10000+100).values.astype(int),points.index])
+            values2 = np.diagonal(df.loc[(points2*10000+100).values.astype(int),points2.index])
 
-        ax.plot(points, values, '.', color='b')
-        ax.plot(points2, values2, '.', color='r')
-        axs[c].set_title(chname[ch])
-    if c in [2,3]:
-        axs[c].set_xlabel('Time [s]')
+            ax.plot(points, values, '.', color='b')
+            ax.plot(points2, values2, '.', color='r')
+            axs[c].set_title(chname[ch])
+        if c in [2,3]:
+            axs[c].set_xlabel('Time [s]')
 
-axs[0].set_ylabel('Early Slip')
-axs[2].set_ylabel('No-Slip Belts')
-axs[-1].set_xlim(0,0.2)
+    axs[0].set_ylabel('Early Slip')
+    axs[2].set_ylabel('No-Slip Belts')
+    axs[-1].set_xlim(0,0.2)
+#%% FIGURE - TIME TO BELT SLIP VS NECK/CHEST RESPONSE - 3 ROWS
+if 0:
+    ok, slip = tb.split(table, 'CBL_BELT', ['OK','SLIP']).values()
+    slip = slip[~slip.T1.isnull() & ~slip.T1.isin(['?'])]
+    bin1 = slip[(0.060<=slip.T1) & (slip.T1<0.08)]
+    bin2 = slip[(0.080<slip.T1) & (slip.T1<0.105)]
+
+    plt.close('all')
+    fig, axs = style.subplots(3, 2, sharex='all', sharey='col', figsize=(6.5, 7))
+
+    ind = pd.concat([time, pd.Series(time.index)], axis=1).set_index('Time')
+    chlist = ['11NECKLO00THFOXA','11CHSTLEUPTHDSXB']
+    chname = dict(zip(chlist, ['Lower Neck $F_x$', 'Upper Left Chest $D_x$']))
+
+    for c, (ch,group) in enumerate(zip(['11NECKLO00THFOXA', '11CHSTLEUPTHDSXB','11NECKLO00THFOXA', '11CHSTLEUPTHDSXB','11NECKLO00THFOXA', '11CHSTLEUPTHDSXB'],[bin1,bin1,bin2,bin2,ok,ok])):
+
+        ax=axs[c]
+        tcns = group.CIBLE.tolist()
+        df = fulldata[ch].loc[:,tcns]
+        if c in [0,2,4]:
+            colors = colors_neck
+        if c in [1,3,5]:
+            colors = colors_chst
+
+        for tcn in df.columns:
+            ax.plot(time, df[tcn], color=colors[tcn])
+
+        if c in [0,1,2,3]:
+            tab = group.set_index('CIBLE')
+            points = tab.loc[tcns].T1
+            points2 = tab.loc[tcns].T2
+            values = np.diagonal(df.loc[(points*10000+100).values.astype(int),points.index])
+            values2 = np.diagonal(df.loc[(points2*10000+100).values.astype(int),points2.index])
+
+            ax.plot(points, values, '.', color='b')
+            ax.plot(points2, values2, '.', color='r')
+        if c in [0,1]:
+            axs[c].set_title(chname[ch])
+        if c in [4,5]:
+            axs[c].set_xlabel('Time [s]')
+
+    axs[0].set_ylabel('Early Slip Belts')
+    axs[2].set_ylabel('Late Slip Belts')
+    axs[4].set_ylabel('No-Slip Belts')
+    axs[-1].set_xlim(0,0.2)
+    plt.subplots_adjust(top=0.947,bottom=0.083,left=0.14,right=0.953,hspace=0.28,wspace=0.302)
+#%% TABLE NECK FORCE PEAK LOAD
+table = tb.get('THOR')
+speeds = [[48,56],[48]]#,[56]]
+print('X')
+for speed in speeds:
+    slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+    oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+    print(round(fulldata['11NECKLO00THFOXA'].loc[:,oks].max().mean(), -1),'+',round(fulldata['11NECKLO00THFOXA'].loc[:,oks].max().std(), -1))
+    print(round(fulldata['11NECKLO00THFOXA'].loc[:,slips].max().mean(), -1),'+',round(fulldata['11NECKLO00THFOXA'].loc[:,slips].max().std(), -1))
+    print(round(fulldata['11NECKLO00THFOXA'].loc[:,slips].max().mean()-fulldata['11NECKLO00THFOXA'].loc[:,oks].max().mean(), -1))
+print('Y')
+for speed in speeds:
+    slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+    oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+    print(round(fulldata['11NECKLO00THFOYA'].loc[:,oks].min().mean(), -1),'+',round(fulldata['11NECKLO00THFOYA'].loc[:,oks].min().std(), -1))
+    print(round(fulldata['11NECKLO00THFOYA'].loc[:,slips].min().mean(), -1),'+',round(fulldata['11NECKLO00THFOYA'].loc[:,slips].min().std(), -1))
+    print(round(fulldata['11NECKLO00THFOYA'].loc[:,slips].min().mean()-fulldata['11NECKLO00THFOYA'].loc[:,oks].min().mean(), -1))
+#%% TABLE CHEST DSX PEAK
+speeds = [[48,56],[48]]#,[56]]
+
+print('LEUP mean')
+for speed in speeds:
+    slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+    oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+    print(round(fulldata['11CHSTLEUPTHDSXB'].loc[:,oks].min().mean(), 0),'+',round(fulldata['11CHSTLEUPTHDSXB'].loc[:,oks].min().std(), 0))
+    print(round(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips].min().mean(), 0),'+',round(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips].min().std(), 0))
+    print(round(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips].min().mean()-fulldata['11CHSTLEUPTHDSXB'].loc[:,oks].min().mean(), 0))
+print('LEUP median')
+for speed in speeds:
+    slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+    oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+    print(round(fulldata['11CHSTLEUPTHDSXB'].loc[:,oks].min().median(), 0))
+    print(round(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips].min().median(), 0))
+    print(round(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips].min().median()-fulldata['11CHSTLEUPTHDSXB'].loc[:,oks].min().median(), 0))
+print('RILO mean')
+for speed in speeds:
+    slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+    oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+    print(round(fulldata['11CHSTRILOTHDSXB'].loc[:,oks].min().mean(), 0),'+',round(fulldata['11CHSTRILOTHDSXB'].loc[:,oks].min().std(), 0))
+    print(round(fulldata['11CHSTRILOTHDSXB'].loc[:,slips].min().mean(), 0),'+',round(fulldata['11CHSTRILOTHDSXB'].loc[:,slips].min().std(), 0))
+    print(round(fulldata['11CHSTRILOTHDSXB'].loc[:,slips].min().mean()-fulldata['11CHSTRILOTHDSXB'].loc[:,oks].min().mean(), 0))
+print('RILO median')
+for speed in speeds:
+    slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+    oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin(speed) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+    print(round(fulldata['11CHSTRILOTHDSXB'].loc[:,oks].min().median(), 0))
+    print(round(fulldata['11CHSTRILOTHDSXB'].loc[:,slips].min().median(), 0))
+    print(round(fulldata['11CHSTRILOTHDSXB'].loc[:,slips].min().median()-fulldata['11CHSTRILOTHDSXB'].loc[:,oks].min().median(), 0))
+#%% TABLE OTHER CHANNELS
+
+#Right clavicle stuff
+
+df = fulldata['11SPIN0100THACYC'].loc[:,oks].max()
+print(round(df.mean(),0), round(df.std(),0))
+df = fulldata['11SPIN0100THACYC'].loc[:,slips].max()
+print(round(df.mean(),0), round(df.std(),0))
+
+df = fulldata['11CHST0000THACYC'].loc[:,oks].max()
+print(round(df.mean(),0), round(df.std(),0))
+df = fulldata['11CHST0000THACYC'].loc[:,slips].max()
+print(round(df.mean(),0), round(df.std(),0))
+
+df = fulldata['11THSP0100THAVXA'].loc[:,oks].min()
+print(round(df.mean(),0), round(df.std(),0))
+df = fulldata['11THSP0100THAVXA'].loc[:,slips].min()
+print(round(df.mean(),0), round(df.std(),0))
+
+df = fulldata['11THSP0100THAVZA'].loc[:,oks].max()
+print(round(df.mean(),0), round(df.std(),0))
+df = fulldata['11THSP0100THAVZA'].loc[:,slips].max()
+print(round(df.mean(),0), round(df.std(),0))
+
+df = fulldata['11FEMRLE00THFOZB'].loc[:,oks].min()
+print(round(df.mean(),0), round(df.std(),0))
+df = fulldata['11FEMRLE00THFOZB'].loc[:,slips].min()
+print(round(df.mean(),0), round(df.std(),0))

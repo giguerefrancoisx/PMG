@@ -73,7 +73,7 @@ def process(raw, norm=True, smooth=True, scale=True, win_type='parzen'):
         data = (data-data.min().min())/(data.max().max()-data.min().min())-int(sign)
     return data
 
-def smooth(data, win_type):
+def smooth(data, win_type='parzen'):
     return process(data, norm=False, smooth=True, scale=False, win_type=win_type)
 
 def scale(data):
