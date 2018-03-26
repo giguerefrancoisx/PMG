@@ -148,7 +148,7 @@ def find_value(data, time=None, scale=1, offset=0, minor=False, fun=firstsmalles
     if time is None:
         time = pd.Series(range(len(data)))
     if fun == 'min':
-        fun = lambda x: x[0]
+        fun = lambda x: x.iloc[0]
 
     positive = positive_max(data) if (not minor) else (not positive_max(data))
     peaks = data.max() if positive else data.min()
@@ -156,7 +156,7 @@ def find_value(data, time=None, scale=1, offset=0, minor=False, fun=firstsmalles
     stop = data.idxmax() if positive else data.idxmin()
     diff = data.where(data.apply(lambda x: x.index<=stop[x.name]), other=np.inf)-values
     indices = np.argsort(diff.abs(), axis=0).apply(fun,0)
-    times = indices.apply(lambda i: time[int(i)])
+    times = indices.apply(lambda i: time[time.index[0]+int(i)])
 
     return values, times
 
@@ -174,26 +174,19 @@ def find_all_peaks(array, minor=False, override=None):
         pts = np.diff(np.sign(np.diff(array))).nonzero()[0] + 1
     return pts
 
-def bounds(df, tcn): #TODO figure out a better lower, upper calculation
+def bounds(df): #TODO figure out a better lower, upper calculation
     """return the left, right, upper, and lower bounds of a peak"""
-    column = df[tcn]
     lower, upper = df.min().min(), df.max().max()
     positive = abs(df.max().median())>abs(df.min().median())
-#    through_zero = (upper>=0) and (lower<=0)
     through_zero = df.max().median()*df.min().median()<0
     if through_zero:
-        lower, upper = (-df.min().max()/2, upper) if positive else (lower, -df.max().min()/2)
+        lower, upper = (df.max().min()/2, df.max().max()) if positive else (df.min().min(), df.min().max()/2)
     else:
-        mean = df.mean().mean() #Use Median?
-        lower, upper = (mean+lower, upper) if positive else (lower, mean-upper)
-    limit = lower if positive else upper
+        raise Exception('This case isn\'t coded yet')
+#        mean = df.mean().mean() #Use Median?
+#        lower, upper = (mean+lower, upper) if positive else (lower, mean-upper)
 
-    search_range = np.nonzero(column/limit>1)[0]
-    if search_range.size == 0:
-        raise Exception('Bounds cannot be determined')
-    left, right = np.min(search_range), np.max(search_range)
-
-    return left, right, lower, upper
+    return lower, upper
 
 def smooth_peaks(data):
     """Find the least-smoothed curve such that there exists a single peak in
@@ -236,15 +229,15 @@ def smooth_peaks(data):
     for tcn in data.columns:
         N=0
         smooth=False
-        left, right, lower, upper = bounds(data, tcn)
+        lower, upper = bounds(data)
         while not smooth:
-            N+=10
+            N+=20
             smoothed = data[tcn].rolling(N, 0, center=True, win_type='triang').mean()
-            pts = find_all_peaks(smoothed)
+            override = 'max' if positive_max(data) else 'min'
+            pts = find_all_peaks(smoothed, override=override)
             # if there exists a single peak within the bounds, it is now smooth
-            if len(pts[(lower <= data[tcn].loc[pts].values) & \
-                       (data[tcn].loc[pts].values <= upper) & \
-                       (left <= pts) & (pts <= right)]) == 1:
+            if len(pts[(lower <= data[tcn].iloc[pts].values) & \
+                       (data[tcn].iloc[pts].values <= upper)]) == 1:
                 smooth = True
             if N>500:
                 break
@@ -254,7 +247,85 @@ def smooth_peaks(data):
         return smooth_data[tcn]
     else:
         return smooth_data
-
+#%% SMOOTH DEBUG
+#import PMG.COM.table as tb
+#import PMG.COM.plotstyle as style
+#THOR = 'P:/AHEC/Data/THOR/'
+#chlist = []
+#chlist.extend(['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB','11CHSTRILOTHDSXB'])
+#chlist.extend(['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA'])
+#chlist.extend(['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA'])
+#chlist.extend(['11SPIN0100THACYC','11THSP0100THAVXA','11THSP0100THAVZA'])
+##time, fulldata = import_data(THOR, chlist, check=False)
+#table = tb.get('THOR')
+#table = table[table.TYPE.isin(['Frontale/Véhicule'])]
+#slips  = table[table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+#oks = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+#
+#group = oks
+#allchannels = [['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA'],
+#               ['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA']]
+##%%
+#for channel in allchannels[0]+allchannels[1]:
+#
+#    plt.close('all')
+#    plt.figure()
+#    ax = plt.gca()
+#    data = fulldata[channel].loc[:,group].dropna(axis=1)
+#
+##    lower, upper = data.min().min(), data.max().max()
+#    positive = abs(data.max().median())>abs(data.min().median())
+#    through_zero = data.max().median()*data.min().median()<0
+#    if through_zero:
+#        lower, upper = (data.max().min()/2, data.max().max()) if positive else (data.min().min(), data.min().max()/2)
+#    else:
+#        lower, upper = 0
+#
+#    ax.plot(data, alpha=0.5)
+##    ax.axhline(data.max().max())
+##    ax.axhline(data.max().median())
+##    ax.axhline(data.max().min())
+##    ax.axhline(data.min().max())
+##    ax.axhline(data.min().median())
+##    ax.axhline(data.min().min())
+#    ax.axhline(upper, color='b')
+#    ax.axhline(lower, color='r')
+#    ax.axhline(data.max().min() if positive else data.min().max(), color='g')
+#    ax.axhline(data.max().median() if positive else data.min().median(), color='tab:purple')
+#
+#    plt.waitforbuttonpress()
+##%%
+#for channel in allchannels[1]:#+allchannels[1]:
+#
+#    plt.close('all')
+#    r, c = style.sqfactors(len(group))
+#    fig, axs = style.subplots(r, c, sharex='all', sharey='all')
+#    data = fulldata[channel].loc[:,group].dropna(axis=1)
+#    smooth_data = pd.DataFrame(columns=data.columns)
+#    for ax, tcn in zip(axs, data.columns):
+#        N=0
+#        smooth=False
+#        lower, upper = bounds(data)
+#        while not smooth:
+#            N+=20
+#            smoothed = data[tcn].rolling(N, 0, center=True, win_type='triang').mean()
+#            override = 'max' if positive_max(data) else 'min'
+#            pts = find_all_peaks(smoothed, override=override)
+#            # if there exists a single peak within the bounds, it is now smooth
+#            if len(pts[(lower <= data[tcn].loc[pts].values) & \
+#                       (data[tcn].loc[pts].values <= upper)]) == 1:
+#                smooth = True
+#            if N>500:
+#                break
+#        smooth_data[tcn] = smoothed
+#        ax.plot(data[tcn], alpha=0.5)
+#        ax.plot(smooth_data[tcn])
+#        ax.plot(smooth_data[tcn].loc[pts], 'k.')
+#        ax.axhline(upper)
+#        ax.axhline(lower)
+#
+#    plt.waitforbuttonpress()
+#%%
 def clean_outliers(data, stage): #TODO - restrict to range (eg: before 200ms)
 
     if isinstance(data, list):

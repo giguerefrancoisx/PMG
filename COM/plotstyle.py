@@ -242,23 +242,27 @@ def sqfactors(n, axratio=1, figratio=1.6):
 def subplots(r, c, sharex='none', sharey='none', visible=True, figsize=None, **kwargs):
     """
     Input
-        r, c: number of rows and columns in subplot grid
-        sharex: string or list indicating how to share the x axis
+    ---------
+    r, c : number of rows and columns in subplot grid
+    sharex : string or list indicating how to share the x axis
 
-    sharex and sharey can be passed as a list of subplot locations sharing
+    Parameters sharex and sharey can be passed as a list of subplot locations sharing
     the x or y axis, respectively.
-    Example: sharey = [1,2,3,4] will create individual y axes.
-             sharey = [1,2,1,4] will share the y axis for plot 1 and 3
-             sharey = [1,1,1,1] will share the y axes for all plots
+
+    sharey = [1,2,3,4] will create individual y axes.
+    sharey = [1,2,1,4] will share the y axis for plot 1 and 3
+    sharey = [1,1,1,1] will share the y axes for all plots
+
     sharex and sharey can also be assigned 'all', 'none', 'row', or 'col'.
-    'row' will share the specified axis along the rows, for example.
+    Setting 'row' will share the specified axes along the rows, for example.
 
     Returns
-        fig, axs
+    --------
+    fig, axs
     """
     if figsize is None:
         figsize = (5*c, 3.125*r)
-#    axs = [] #Why is this here?
+
 
     if any([sharex == 'all', sharex == 'row', sharex == 'col',
             sharex == 'none']) and any([sharey == 'all', sharey == 'row',
@@ -298,7 +302,7 @@ def subplots(r, c, sharex='none', sharey='none', visible=True, figsize=None, **k
         sharey = arrays[sharey]
 
     if all([type(sharex) == list, type(sharey) == list]):
-
+        axs = []
         if len(sharex) != len(sharey):
             print('Warning! sharex and sharey lists are unequal length. The longer list will be truncated.')
 
