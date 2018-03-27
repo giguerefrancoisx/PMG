@@ -26,8 +26,12 @@ oks = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
 
 plt.rcParams['font.size']= 10
 
-slip_color = 'tab:blue'
-ok_color = 'tab:red'
+#slip_color = 'tab:blue'
+#ok_color = 'tab:red'
+
+slip_color = '#5e3c99'
+slide_color = '#fdb863'
+ok_color = '#e66101'
 
 cmap_neck = matplotlib.colors.LinearSegmentedColormap.from_list('custom', [ok_color,slip_color,slip_color], 256)
 colors_neck = style.colordict(fulldata['11NECKLO00THFOXA'].loc[:,slips+oks], 'max', cmap_neck)
@@ -86,6 +90,11 @@ colors_chst = style.colordict(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips+oks], 'mi
 #
 #    plt.tight_layout()
 #%% Like above but 2x2 grid
+xfmt = matplotlib.ticker.ScalarFormatter(useMathText=True)
+xfmt.set_powerlimits((-3,4))
+#xloc = matplotlib.ticker.MaxNLocator(nbins='auto', steps=[1, 1.5, 2, 2.5, 3, 4, 5, 10],
+#                                     prune=None, min_n_ticks=4)
+
 if 1:
     plt.close('all')
     chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11CHSTRILOTHDSXB']
@@ -94,10 +103,8 @@ if 1:
               'Upper Left Chest $\mathregular{D_x}$ [mm]',
               'Lower Right Chest $\mathregular{D_x}$ [mm]']
     ylabel = dict(zip(chlist, labels))
-    xfmt = matplotlib.ticker.ScalarFormatter(useMathText=True)
-    xfmt.set_powerlimits((-3,4))
 
-    fig, axs = style.subplots(2, 2, sharex='all', sharey='none', figsize=(7,4.5))
+    fig, axs = style.subplots(2, 2, sharex=[1,1,1,1], sharey=[1,2,3,3], figsize=(7,4.5))
 
     for i, channel in enumerate(chlist):
         df = fulldata[channel].dropna(axis=1)
@@ -119,9 +126,12 @@ if 1:
 
         axs[i].set_ylabel(ylabel[channel])
         axs[i].yaxis.set_label_coords(-0.28,0.5)
+        lim = np.hstack((ok_low,slip_low)).min(), np.hstack((ok_high,slip_high)).max()
+        style.custom_locator(axs[i], lim, 5)
         axs[i].yaxis.set_major_formatter(xfmt)
 
-    axs[-1].set_xlim(0,0.3)
+
+    axs[-1].set_xlim(0,0.2)
     axs[-1].set_xlabel('Time [s]')
     axs[-2].set_xlabel('Time [s]')
     axs[-1].legend(loc='lower right', fontsize=6)
@@ -592,6 +602,8 @@ SB_table['NECKY'] = fulldata['11NECKLO00THFOYA'].loc[:,SB_table.index].min()
 SB_table['CHEST'] = fulldata['11CHSTLEUPTHDSXB'].loc[:,SB_table.index].min()
 SB_table['COLOR'] = SB_table['CBL_BELT'].apply(lambda x: ok_color if x=='OK' else slip_color)
 
+import scipy.stats
+
 if 1:
     plt.close('all')
     fig, axs = style.subplots(2,2, sharex=[1,1,1,4], sharey=[1,2,3,3], figsize=(7, 4.5))
@@ -607,23 +619,41 @@ if 1:
     ax = axs[1]
     notnull = ~SB_table['T1'].isin(['?']) & ~SB_table['T1'].isnull()
     ax.scatter(SB_table['FRACTION'][notnull],SB_table['T1'][notnull],marker='.',c=SB_table['COLOR'][notnull], label='Slip')
+    slope, intcp, rval, *_ = scipy.stats.linregress(SB_table['FRACTION'][notnull].tolist(), SB_table['T1'][notnull].tolist())
+    print(rval**2)
+    ylim = ax.get_ylim()
+    ax.plot(np.linspace(0.61,1,20), intcp+slope*np.linspace(0.61,1,20), 'k', lw=1)
+    ax.set_ylim(ylim)
     ax.set_xlabel('Belt Position Relative to Neck')
     ax.set_ylabel('Time to Belt Slip [s]')
     ax.yaxis.set_label_coords(-0.26,0.5)
 #    ax.legend()
 
     ax = axs[2]
-    ax.scatter(SB_table['FRACTION'],SB_table['NECKY'],marker='.',c=SB_table['COLOR'], label='Slip')
-    ax.plot(np.nan, np.nan, '.', color=ok_color, label = 'No-Slip')
+    is_ok = SB_table['CBL_BELT']=='OK'
+    ax.scatter(SB_table['FRACTION'][~is_ok],SB_table['NECKY'][~is_ok],marker='.',c=slip_color, label='Slip')
+    ax.scatter(SB_table['FRACTION'][is_ok],SB_table['NECKY'][is_ok],marker='.',c=ok_color, label='No-Slip')
+    ylim = ax.get_ylim()
+    slope, intcp, rval, *_ = scipy.stats.linregress(SB_table['FRACTION'][~is_ok].tolist(),SB_table['NECKY'][~is_ok].tolist())
+    print(rval**2)
+    ax.plot(np.linspace(0.61,1,20), intcp+slope*np.linspace(0.61,1,20), 'k', lw=1)
+    slope, intcp, rval, *_ = scipy.stats.linregress(SB_table['FRACTION'][is_ok].tolist(),SB_table['NECKY'][is_ok].tolist())
+    print(rval**2)
+    ax.plot(np.linspace(0.5,.85,20), intcp+slope*np.linspace(0.5,.85,20), 'k', lw=1)
+    ax.set_ylim(ylim)
     ax.set_xlabel('Belt Position Relative to Neck')
-    ax.set_ylabel('Neck Y Force [N]')
+    ax.set_ylabel('Lower Neck $\mathregular{F_y}$ [N]')
     ax.legend()
 
     ax = axs[3]
-#    notnull = ~SB_table['T2'].isin(['?']) & ~SB_table['T2'].isnull()
     ax.scatter(SB_table['T1'][notnull],SB_table['NECKY'][notnull],marker='.',c=SB_table['COLOR'][notnull], label='Slip')
+    slope, intcp, rval, *_ = scipy.stats.linregress(SB_table['T1'][notnull].tolist(),SB_table['NECKY'][notnull].tolist())
+    print(rval**2)
+    ylim = ax.get_ylim()
+    ax.plot(np.linspace(0.058,.1,20), intcp+slope*np.linspace(0.058,.1,20), 'k', lw=1)
+    ax.set_ylim(ylim)
     ax.set_xlabel('Time to Belt Slip [s]')
-    ax.set_ylabel('Neck Y Force [N]')
+    ax.set_ylabel('Lower Neck $\mathregular{F_y}$ [N]')
 #    ax.legend()
 
 
@@ -821,9 +851,16 @@ for ch, showmax in zip(chlist, showmax):
         print(fulldata[ch].loc[:,slips].min())
         print(round(fulldata[ch].loc[:,slips].min().mean()-fulldata[ch].loc[:,oks].min().mean(), 1))
 #%% Find tests that are missing data
+chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11CHSTRILOTHDSXB',
+          '11CLAVLEOUTHFOXA','11CLAVLEINTHFOXA','11SPIN0100THACXC','11SPIN0100THACYC',
+          '11CHST0000THACYC', '11THSP0100THAVXA','11THSP0100THAVZA','11FEMRLE00THFOZB']
+
 table = tb.get('THOR')
 slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48,56]) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
 oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48,56]) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+
+time, fulldata = dat.import_data(THOR, chlist, check=False)
+
 tcn_dict = {}
 ch_dict = {}
 for ch in chlist:
@@ -837,3 +874,45 @@ for ch in chlist:
                 tcn_dict[tcn] = [ch]
                 ch_dict[ch] = [tcn]
             print(ch, tcn)
+#%% FIGURES - SLED
+SLED = 'P:/AHEC/Data/THOR-SLED/'
+chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11CHSTRILOTHDSXB','S0SLED000000ACXD']
+tcns = ['TC58-278-2', 'TC58-278-3', 'TC58-278-4']
+time, sleddata = dat.import_data(SLED, chlist, tcns, check=False)
+
+colors = style.colordict(tcns, values=[slide_color, ok_color, slip_color])
+labels = dict(zip(tcns, ['Slide', 'No-Slip', 'Slip']))
+
+#%%
+if 1:
+    plt.close('all')
+    plt.figure(figsize=(4,2.5))
+    for tcn in tcns:
+        plt.plot(time, sleddata['S0SLED000000ACXD'][tcn], color=colors[tcn], label=labels[tcn], lw=1)
+        plt.xlim(-0.01,0.15)
+        plt.ylim(-25,5)
+        plt.xlabel('Time [s]')
+        plt.ylabel('Acceleration [g]')
+        plt.legend(loc='lower right', fontsize=8)
+        plt.tight_layout()
+#%%
+chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11CHSTRILOTHDSXB','S0SLED000000ACXD']
+names = ['Lower Neck $\mathregular{F_x}$ [N]',
+         'Lower Neck $\mathregular{F_y}$ [N]',
+         'Upper Left Chest $\mathregular{D_x}$ [mm]',
+         'Lower Right Chest $\mathregular{D_x}$ [mm]']
+chname = dict(zip(chlist, names))
+
+if 1:
+    plt.close('all')
+    fig, axs = style.subplots(2,2, sharex=[1,1,1,1], sharey=[1,2,3,3], figsize=(7,4.5))
+    for ch, ax in zip(chlist, axs):
+        for tcn in tcns:
+           ax.plot(time, sleddata[ch][tcn], color=colors[tcn], label=labels[tcn], lw=1)
+           ax.set_ylabel(chname[ch])
+           ax.set_xlabel('Time [s]')
+           lim = sleddata[ch].min().min(), sleddata[ch].max().max()
+           style.custom_locator(ax, lim, max_ticks=6)
+    plt.xlim(0,0.2)
+    plt.legend(loc='lower right', fontsize=8)
+    plt.tight_layout()

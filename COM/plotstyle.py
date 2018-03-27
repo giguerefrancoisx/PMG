@@ -8,6 +8,7 @@ Created on Tue Nov  7 16:13:57 2017
 """
 import numpy as np
 import pandas as pd
+import matplotlib
 import matplotlib.colors as clrs
 import matplotlib.pyplot as plt
 from PMG.COM.data import clean_outliers
@@ -330,3 +331,74 @@ def subplots(r, c, sharex='none', sharey='none', visible=True, figsize=None, **k
         axs = None
 
     return fig, axs
+
+def custom_locator(ax, lim=None, max_ticks=7, steps=[1,2.5,3,4,5,7.5,10], tightest=False, set_lims=True):
+    """Finds the tick locations which are multiples of the arguments of
+    *steps* and whose count doesn't exceed *max_ticks*.
+
+    Input
+    ----------
+    ax : axes instance
+        Current Axes
+    lim : list-like, optional
+        Specify data limits. If None, ax's ylims are used
+    max_ticks : int
+        This function will try to find a tick spacing with exactly max_ticks,
+        but will find the next smallest number of ticks if it fails.
+    steps : array
+        Like matplotlib's steps arg for locators, an array from 1 to 10
+        containing numbers of which multiples can be made. Order of magnitude
+        will be determined automatically, so do not scale.
+    tighest : bool
+        If True, will find the largest step such that the number of ticks is
+        max_ticks, rather than the first.
+    set_lims : bool
+        Set ax's limits to reflect the new tick spacing
+
+    Returns
+    ---------
+    None
+    """
+
+    if lim is None:
+#        lim = ax.get_ylim()
+#        lim = np.array(ax.get_ylim())/10
+        lim = [np.nan, np.nan]
+        for line in ax.lines:
+            xdata, ydata = line.get_data()
+            lim[0] = ydata.min() if (ydata.min()<lim[0] or lim[0] is np.nan) else lim[0]
+            lim[1] = ydata.max() if (ydata.max()>lim[1] or lim[1] is np.nan) else lim[1]
+        for polygon in ax.collections:
+#            xdata = polygon.get_paths()[0].to_polygons()[0][:,0]
+            ydata = polygon.get_paths()[0].to_polygons()[0][:,1]
+            lim[0] = ydata.min() if (ydata.min()<lim[0] or lim[0] is np.nan) else lim[0]
+            lim[1] = ydata.max() if (ydata.max()>lim[1] or lim[1] is np.nan) else lim[1]
+
+    mag = np.floor(np.log10(lim[1]-lim[0]))-1
+    ticks_found = False
+    while not ticks_found:
+        for step in steps:
+            step = step*(10**mag)
+            n_ticks = np.ceil(lim[1]/step)-np.floor(lim[0]/step)+1
+            if n_ticks == max_ticks:
+#                print(step)
+#                print(np.round(lim[0]), np.round(lim[1]))
+#                print(np.floor(lim[0]/step)*step+np.arange(n_ticks)*step)
+                ticks = np.floor(lim[0]/step)*step+np.arange(n_ticks)*step
+                ticks_found=True
+                if tightest:
+                    continue
+                else:
+                    break
+            elif n_ticks < max_ticks and not ticks_found:
+#                print(step)
+#                print(np.round(lim[0]), np.round(lim[1]))
+#                print(np.floor(lim[0]/step)*step+np.arange(n_ticks)*step)
+                ticks = np.floor(lim[0]/step)*step+np.arange(n_ticks)*step
+                ticks_found=True
+                break
+        mag=mag+1
+
+    ax.set_yticks(ticks)
+    if set_lims:
+        ax.set_ylim(ticks[0], ticks[-1])
