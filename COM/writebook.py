@@ -235,7 +235,8 @@ def writeHDF5(directory, chlist):
             print(''.join(l))
             i = i+1
 
-            test_store.put(filename[:-9].replace('-','_'), testframe, format='table')
+            new_name = filename[:filename.find('(')].replace('-','_').strip(' .')
+            test_store.put(new_name, testframe, format='table')
 
         for chname in chlist: #this loop got slower
 
@@ -252,7 +253,7 @@ def writeHDF5(directory, chlist):
                     testdata.columns = [tcn]
                     framelist = pandas.concat([framelist, testdata], axis = 1)
                 else:
-                    tcnlist.append(tcn+'_'+chname[0:2])
+                    tcnlist.append(tcn)#+'_'+chname[0:2])
 
             if len(tcnlist) > 0:
                 print('The channel '+chname+' wasn\'t in these TCNs:')

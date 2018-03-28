@@ -19,7 +19,7 @@ chlist.extend(['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPI
 chlist.extend(['11SPIN0100THACYC','11THSP0100THAVXA','11THSP0100THAVZA'])
 time, fulldata = dat.import_data(THOR, chlist, check=False)
 table = tb.get('THOR')
-table = table[table.TYPE.isin(['Frontale/Véhicule'])]
+#table = table[table.TYPE.isin(['Frontale/Véhicule'])]
 #table = table[table.TYPE.isin(['Frontale/Mur'])]
 slips  = table[table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
 oks = table[table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
@@ -90,6 +90,9 @@ colors_chst = style.colordict(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips+oks], 'mi
 #
 #    plt.tight_layout()
 #%% Like above but 2x2 grid
+slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48]) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48]) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+
 xfmt = matplotlib.ticker.ScalarFormatter(useMathText=True)
 xfmt.set_powerlimits((-3,4))
 #xloc = matplotlib.ticker.MaxNLocator(nbins='auto', steps=[1, 1.5, 2, 2.5, 3, 4, 5, 10],
@@ -119,24 +122,29 @@ if 1:
         ok_high = df.loc[:,oks].quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
         ok_low = df.loc[:,oks].quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
 
-        axs[i].plot(time, slip_median, color=slip_color, label='Median, n={}'.format(len(slips)))
-        axs[i].plot(time, ok_median, color=ok_color, label='Median, n={}'.format(len(oks)))
-        axs[i].fill_between(time, slip_high, slip_low, color=slip_color, alpha=0.2, label='{:2.0f}th Percentile'.format(100*(1-alpha)))
-        axs[i].fill_between(time, ok_high, ok_low, color=ok_color, alpha=0.2, label='{:2.0f}th Percentile'.format(100*(1-alpha)))
+        axs[i].plot(time, slip_median, color=slip_color, label='Slip Median, n={}'.format(len(slips)))
+        axs[i].plot(time, ok_median, color=ok_color, label='No-Slip Median, n={}'.format(len(oks)))
+        axs[i].fill_between(time, slip_high, slip_low, color=slip_color, alpha=0.2, label='Slip {:2.0f}$^{{{}}}$ Percentile'.format(100*(1-alpha),'th'))
+        axs[i].fill_between(time, ok_high, ok_low, color=ok_color, alpha=0.2, label='No-Slip {:2.0f}$^{{{}}}$ Percentile'.format(100*(1-alpha),'th'))
 
         axs[i].set_ylabel(ylabel[channel])
         axs[i].yaxis.set_label_coords(-0.28,0.5)
         lim = np.hstack((ok_low,slip_low)).min(), np.hstack((ok_high,slip_high)).max()
-        style.custom_locator(axs[i], lim, 5)
+        style.custom_locator(axs[i], lim, 6)
         axs[i].yaxis.set_major_formatter(xfmt)
+        axs[i].text(0.04,0.94,'ABCD'[i], horizontalalignment='left',
+           verticalalignment='top',transform=axs[i].transAxes, fontsize=12)
 
 
     axs[-1].set_xlim(0,0.2)
     axs[-1].set_xlabel('Time [s]')
     axs[-2].set_xlabel('Time [s]')
-    axs[-1].legend(loc='lower right', fontsize=6)
+#    axs[-1].legend(loc='lower left', fontsize=6, bbox_to_anchor=(1, 0))
+    handles, labels = axs[-1].get_legend_handles_labels()
+    fig.legend(handles, labels, 'upper center', ncol=2, fontsize=9,
+               bbox_to_anchor = (0.5, 1), bbox_transform = fig.transFigure)
 
-    plt.tight_layout()
+    plt.tight_layout(rect=(0, 0, 1, 0.9))
 #%% FIGURE - BOOTSTRAPPED TIME TO PEAK - HISTOGRAM
 def bootstrap_resample(X, n=1):
     X_resample = np.zeros((n,len(X)))
@@ -596,6 +604,8 @@ if 1:
 ##plt.gca().set_ylabel('Neck X Force [N]')
 #%% FIGURE - Belt fraction grid
 columns = ['CIBLE','CBL_BELT','T1','T2','FRACTION']
+table = tb.get('THOR')
+table = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48])]
 SB_table = table.loc[table.FRACTION.dropna().index,columns].set_index('CIBLE')
 SB_table['NECK'] = fulldata['11NECKLO00THFOXA'].loc[:,SB_table.index].max()
 SB_table['NECKY'] = fulldata['11NECKLO00THFOYA'].loc[:,SB_table.index].min()
@@ -614,7 +624,8 @@ if 1:
     ax.set_xlabel('Belt Position Relative to Neck')
     ax.set_ylabel('Frequency')
     ax.yaxis.set_label_coords(-0.26,0.5)
-    ax.legend(loc='upper right')
+    ax.text(0.04,0.94,'A', horizontalalignment='left',
+           verticalalignment='top', transform=ax.transAxes, fontsize=12)
 
     ax = axs[1]
     notnull = ~SB_table['T1'].isin(['?']) & ~SB_table['T1'].isnull()
@@ -627,12 +638,13 @@ if 1:
     ax.set_xlabel('Belt Position Relative to Neck')
     ax.set_ylabel('Time to Belt Slip [s]')
     ax.yaxis.set_label_coords(-0.26,0.5)
-#    ax.legend()
+    ax.text(0.04,0.94,'B', horizontalalignment='left',
+           verticalalignment='top', transform=ax.transAxes, fontsize=12)
 
     ax = axs[2]
     is_ok = SB_table['CBL_BELT']=='OK'
-    ax.scatter(SB_table['FRACTION'][~is_ok],SB_table['NECKY'][~is_ok],marker='.',c=slip_color, label='Slip')
     ax.scatter(SB_table['FRACTION'][is_ok],SB_table['NECKY'][is_ok],marker='.',c=ok_color, label='No-Slip')
+    ax.scatter(SB_table['FRACTION'][~is_ok],SB_table['NECKY'][~is_ok],marker='.',c=slip_color, label='Slip')
     ylim = ax.get_ylim()
     slope, intcp, rval, *_ = scipy.stats.linregress(SB_table['FRACTION'][~is_ok].tolist(),SB_table['NECKY'][~is_ok].tolist())
     print(rval**2)
@@ -643,7 +655,8 @@ if 1:
     ax.set_ylim(ylim)
     ax.set_xlabel('Belt Position Relative to Neck')
     ax.set_ylabel('Lower Neck $\mathregular{F_y}$ [N]')
-    ax.legend()
+    ax.text(0.04,0.94,'C', horizontalalignment='left',
+           verticalalignment='top', transform=ax.transAxes, fontsize=12)
 
     ax = axs[3]
     ax.scatter(SB_table['T1'][notnull],SB_table['NECKY'][notnull],marker='.',c=SB_table['COLOR'][notnull], label='Slip')
@@ -654,14 +667,21 @@ if 1:
     ax.set_ylim(ylim)
     ax.set_xlabel('Time to Belt Slip [s]')
     ax.set_ylabel('Lower Neck $\mathregular{F_y}$ [N]')
-#    ax.legend()
+    ax.text(0.04,0.94,'D', horizontalalignment='left',
+           verticalalignment='top', transform=ax.transAxes, fontsize=12)
 
-
-axs[0].set_xlim(0.45,1.05)
-axs[1].set_ylim(0.055,0.105)
-axs[-1].set_xlim(0.055,0.105)
+axs[0].set_xlim(0.40,1.05)
+axs[1].set_ylim(0.052,0.105)
+axs[-1].set_xlim(0.052,0.105)
 axs[-1].set_ylim(-2100,100)
-plt.tight_layout()
+
+handles, labels = axs[0].get_legend_handles_labels()
+handles2, labels2 = axs[2].get_legend_handles_labels()
+handles, labels = handles+handles2, labels+labels2
+fig.legend(handles, labels, 'upper center', ncol=2, fontsize=9,
+           bbox_to_anchor = (0.5, 1), bbox_transform = fig.transFigure)
+
+plt.tight_layout(rect=(0, 0, 1, 0.9))
 #%% FIGURE - TIME TO BELT SLIP VS NECK/CHEST RESPONSE
 if 0:
     ok, slip = tb.split(table, 'CBL_BELT', ['OK','SLIP']).values()
@@ -836,19 +856,19 @@ chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11CHSTRILOTH
           '11CHST0000THACYC', '11THSP0100THAVXA','11THSP0100THAVZA','11FEMRLE00THFOZB']
 time, fulldata = dat.import_data(THOR, chlist, check=False)
 table = tb.get('THOR')
-slips = table[table.TYPE.isin(['Frontale/Mur']) & table.VITESSE.isin([48,56]) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
-oks = table[table.TYPE.isin(['Frontale/Mur']) & table.VITESSE.isin([48,56]) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48]) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48]) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
 for ch, showmax in zip(chlist, showmax):
     print(ch)
     if showmax:
         print(round(fulldata[ch].loc[:,oks].max().mean(), 1),'+',round(fulldata[ch].loc[:,oks].max().std(), 1))
         print(round(fulldata[ch].loc[:,slips].max().mean(), 1),'+',round(fulldata[ch].loc[:,slips].max().std(), 1))
-        print(fulldata[ch].loc[:,slips].max())
+#        print(fulldata[ch].loc[:,slips].max())
         print(round(fulldata[ch].loc[:,slips].max().mean()-fulldata[ch].loc[:,oks].max().mean(), 1))
     if not showmax:
         print(round(fulldata[ch].loc[:,oks].min().mean(), 1),'+',round(fulldata[ch].loc[:,oks].min().std(), 1))
         print(round(fulldata[ch].loc[:,slips].min().mean(), 1),'+',round(fulldata[ch].loc[:,slips].min().std(), 1))
-        print(fulldata[ch].loc[:,slips].min())
+#        print(fulldata[ch].loc[:,slips].min())
         print(round(fulldata[ch].loc[:,slips].min().mean()-fulldata[ch].loc[:,oks].min().mean(), 1))
 #%% Find tests that are missing data
 chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11CHSTRILOTHDSXB',
@@ -887,8 +907,8 @@ labels = dict(zip(tcns, ['Slide', 'No-Slip', 'Slip']))
 if 1:
     plt.close('all')
     plt.figure(figsize=(4,2.5))
-    for tcn in tcns:
-        plt.plot(time, sleddata['S0SLED000000ACXD'][tcn], color=colors[tcn], label=labels[tcn], lw=1)
+    for i, tcn in enumerate(tcns):
+        plt.plot(time, sleddata['S0SLED000000ACXD'][tcn], color=colors[tcn], label=f'Test {i+1}', lw=1)
         plt.xlim(-0.01,0.15)
         plt.ylim(-25,5)
         plt.xlabel('Time [s]')

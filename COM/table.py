@@ -10,10 +10,14 @@ def get(project):
     """Given a project name (eg: 'THOR') return the appropriate table"""
     if project == 'THOR':
         table = pd.read_excel('P:/AHEC/thortable.xlsx', sheetname='All')
-    if project =='AHEC':
+    elif project =='AHEC':
         table = pd.read_excel('P:/AHEC/ahectable.xlsx')
-    if project == 'BOOSTER':
+    elif project == 'BOOSTER':
         table = pd.read_excel('P:/BOOSTER/boostertable.xlsx')
+    elif project == 'SLED':
+        table = pd.read_excel('P:/SLED/sledtable.xlsx')
+    else:
+        raise NotImplementedError('No such project')
 
     table = table.dropna(axis=0, thresh=5).dropna(axis=1, how='all')
     return table
