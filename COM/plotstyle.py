@@ -264,6 +264,10 @@ def subplots(r, c, sharex='none', sharey='none', visible=True, figsize=None, **k
     if figsize is None:
         figsize = (5*c, 3.125*r)
 
+    arrays = {'all':[1 for i in range(r*c)],
+              'row':[(i//c)*c+1 for i in range(r*c)],
+              'col':[i%c+1 for i in range(r*c)],
+              'none':[i+1 for i in range(r*c)]}
 
     if any([sharex == 'all', sharex == 'row', sharex == 'col',
             sharex == 'none']) and any([sharey == 'all', sharey == 'row',
@@ -288,18 +292,22 @@ def subplots(r, c, sharex='none', sharey='none', visible=True, figsize=None, **k
 
     elif any([sharex == 'all', sharex == 'row', sharex == 'col',
               sharex == 'none']):
-        arrays = {'all':[1 for i in range(len(sharey))],
-                  'row':[(i//c)*c+1 for i in range(len(sharey))],
-                  'col':[i%c+1 for i in range(len(sharey))],
-                  'none':[i+1 for i in range(len(sharey))]}
+#        arrays = {'all':[1 for i in range(len(sharey))],
+#                  'row':[(i//c)*c+1 for i in range(len(sharey))],
+#                  'col':[i%c+1 for i in range(len(sharey))],
+#                  'none':[i+1 for i in range(len(sharey))]}
+        if len(sharey) != r*c:
+            print('Warning! sharey is not correct length')
         sharex = arrays[sharex]
 
     elif any([sharey == 'all', sharey == 'row', sharey == 'col',
               sharey == 'none']):
-        arrays = {'all':[1 for i in range(len(sharex))],
-                  'row':[(i//c)*c+1 for i in range(len(sharex))],
-                  'col':[i%c+1 for i in range(len(sharex))],
-                  'none':[i+1 for i in range(len(sharex))]}
+#        arrays = {'all':[1 for i in range(len(sharex))],
+#                  'row':[(i//c)*c+1 for i in range(len(sharex))],
+#                  'col':[i%c+1 for i in range(len(sharex))],
+#                  'none':[i+1 for i in range(len(sharex))]}
+        if len(sharex) != r*c:
+            print('Warning! sharex is not correct length')
         sharey = arrays[sharey]
 
     if all([type(sharex) == list, type(sharey) == list]):
@@ -332,7 +340,59 @@ def subplots(r, c, sharex='none', sharey='none', visible=True, figsize=None, **k
 
     return fig, axs
 
+def CustomLocator(**kwargs):
+    if (kwargs.get('nbins',None) is not None) and \
+        (kwargs.get('min_n_ticks',None) is None):
+        kwargs['min_n_ticks'] = kwargs['nbins']-2
+    defaults = dict(nbins=8,
+                    steps=[1,2,2.5,3,4,5,7.5,10],
+                    integer=False,
+                    symmetric=False,
+                    prune=None,
+                    min_n_ticks=7)
+    defaults.update(**kwargs)
+    kwargs = defaults
+    return matplotlib.ticker.MaxNLocator(**kwargs)
+
+def set_locator(ax, set_x=True, set_y=True, **kwargs):
+    if set_x:
+        ax.xaxis.set_major_locator(CustomLocator(**kwargs))
+    if set_y:
+        ax.yaxis.set_major_locator(CustomLocator(**kwargs))
+
+def get_datalim(ax):
+    xarr = np.array([])
+    yarr = np.array([])
+    for line in ax.lines:
+        xdata, ydata = line.get_data()
+        xarr = np.append(xarr,xdata)
+        yarr = np.append(yarr,ydata)
+    for polygon in ax.collections:
+        xdata = polygon.get_paths()[0].to_polygons()[0][:,0]
+        ydata = polygon.get_paths()[0].to_polygons()[0][:,1]
+        xarr = np.append(xarr,xdata)
+        yarr = np.append(yarr,ydata)
+
+    xdatalim = xarr.min(), xarr.max()
+    ydatalim = yarr.min(), yarr.max()
+    return xdatalim, ydatalim
+
+def viewlim_on_ticks(ax, set_x=True, set_y=True):
+    xdatalim, ydatalim = get_datalim(ax)
+
+    xticks = ax.xaxis.get_ticklocs()
+    yticks = ax.yaxis.get_ticklocs()
+    if set_x:
+        base = np.diff(xticks)[0]
+        xlim = base*np.floor(xdatalim[0]/base),base*np.ceil(xdatalim[1]/base)
+        ax.set_xlim(*xlim)
+    if set_y:
+        base = np.diff(yticks)[0]
+        ylim = base*np.floor(ydatalim[0]/base),base*np.ceil(ydatalim[1]/base)
+        ax.set_ylim(*ylim)
+
 def custom_locator(ax, lim=None, max_ticks=7, steps=[1,2.5,3,4,5,7.5,10], tightest=False, set_lims=True):
+    raise DeprecationWarning('Use set_locator(ax, **kwargs)')
     """Finds the tick locations which are multiples of the arguments of
     *steps* and whose count doesn't exceed *max_ticks*.
 

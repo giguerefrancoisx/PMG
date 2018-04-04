@@ -876,8 +876,8 @@ chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11CHSTRILOTH
           '11CHST0000THACYC', '11THSP0100THAVXA','11THSP0100THAVZA','11FEMRLE00THFOZB']
 
 table = tb.get('THOR')
-slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48,56]) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
-oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48,56]) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
+slips = table[table.TYPE.isin(['Frontale/Mur']) & table.VITESSE.isin([48]) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
+oks = table[table.TYPE.isin(['Frontale/Mur']) & table.VITESSE.isin([48]) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
 
 time, fulldata = dat.import_data(THOR, chlist, check=False)
 
@@ -926,13 +926,15 @@ chname = dict(zip(chlist, names))
 if 1:
     plt.close('all')
     fig, axs = style.subplots(2,2, sharex=[1,1,1,1], sharey=[1,2,3,3], figsize=(7,4.5))
-    for ch, ax in zip(chlist, axs):
+    for i, (ch, ax) in enumerate(zip(chlist, axs)):
         for tcn in tcns:
            ax.plot(time, sleddata[ch][tcn], color=colors[tcn], label=labels[tcn], lw=1)
            ax.set_ylabel(chname[ch])
            ax.set_xlabel('Time [s]')
            lim = sleddata[ch].min().min(), sleddata[ch].max().max()
            style.custom_locator(ax, lim, max_ticks=6)
+           ax.text(0.04,0.94,'ABCD'[i], horizontalalignment='left',
+           verticalalignment='top',transform=ax.transAxes, fontsize=12)
     plt.xlim(0,0.2)
     plt.legend(loc='lower right', fontsize=8)
     plt.tight_layout()

@@ -235,7 +235,7 @@ def writeHDF5(directory, chlist):
             print(''.join(l))
             i = i+1
 
-            new_name = filename[:filename.find('(')].replace('-','_').strip(' .')
+            new_name = filename[:filename.find('(')].replace('-','N').strip(' .')
             test_store.put(new_name, testframe, format='table')
 
         for chname in chlist: #this loop got slower
@@ -246,7 +246,7 @@ def writeHDF5(directory, chlist):
 
             for key in test_store.keys():
 
-                tcn = key[1:].replace('_','-')
+                tcn = key[1:].replace('N','-')
                 testdata = test_store.select(key, columns=[chlist])
                 if chname in list(set(chlist).intersection(testdata.columns)):
                     testdata = testdata[[chname]]

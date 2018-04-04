@@ -80,7 +80,7 @@ def scale(data):
     return process(data, norm=False, smooth=False, scale=True)
 
 def positive_max(data):
-    """if the absolute largest value is positive, positive_max = True"""
+    """if the absolute largest median value is positive, positive_max = True"""
     if isinstance(data, pd.Series):
         data = pd.DataFrame(data)
     return bool(abs(data.max().median())>abs(data.min().median()))
@@ -92,8 +92,8 @@ def firstsmallest(arr):
     arr = np.array(arr)
     if len(arr)==1:
         return arr[0]
-#    if arr[0]>arr[1]+10:
-    if arr[0]>min(arr[1])+10:
+    if arr[0]>arr[1]+10:
+#    if arr[0]>min(arr[1])+10:
         return firstsmallest(arr[1:])
     else:
         return arr[0]
@@ -188,7 +188,7 @@ def bounds(df): #TODO figure out a better lower, upper calculation
 
     return lower, upper
 
-def smooth_peaks(data):
+def smooth_peaks(data, time=None, win_incr=20, override=None, bounds=None, thresh=1):
     """Find the least-smoothed curve such that there exists a single peak in
     the range of interest.
 
@@ -196,13 +196,25 @@ def smooth_peaks(data):
     ----------
     data : Series or Dataframe
         input data
-    return_windows : bool (deactivated for now)
-        flag to set to output windows used for smoothing
+    time : Series, optional
+        Corresponding time
+    win_incr : int, default 20
+        Increment for smoothing window
+    override : 'min' or 'max'
+        Type of peak to find. If none, calls positive_max(data)
+    bounds : (left, right, lower, upper) or 'limits'
+        bounding box to search for peaks inside of. If time is not passed,
+        index of time series must be used for left, right. Pass 'limits' to
+        default to data limits (time[0] to time[-1], data min to data max).
+        If None, find_bounds will automatically choose good-ish bounds for
+        each column
+    thresh : int, default 1
+        maximum number of peaks inside
 
     Returns:
     ----------
-    smooth_data : Series or DataFrame, like given
-        values found in data
+    smooth_data : Series or DataFrame
+        output smoothed data with single peak within bounds
 
     >>> smooth_data = smooth_peaks(data)
     >>> peaks, times = find_peaks(smooth_data, time)
@@ -211,7 +223,7 @@ def smooth_peaks(data):
     ----------
     Peaks found are garanteed to be lesser in magnitude than the raw data. The
     purpose of this function is to find an appropriate time-to-peak value for
-    oscilating data.
+    oscillating data.
     """
     if isinstance(data, pd.Series):
         data = pd.DataFrame(data)
@@ -223,23 +235,41 @@ def smooth_peaks(data):
         data = data.dropna(axis=1)
         print('A column was dropped because it contained nan values. Please '
               'clean data before passing')
+    if time is None:
+        time = pd.Series(np.arange(data.shape[0]))
+    if override is None:
+        override = 'max' if positive_max(data) else 'min'
+
+    if (bounds is not None) and (bounds != 'limits'):
+        left, right, lower, upper = bounds
+    elif bounds == 'limits':
+        lower, upper = data.min().min(), data.max().max()
+        left, right = time.iloc[0], time.iloc[-1]
 
     smooth_data = pd.DataFrame(columns=data.columns)
 
     for tcn in data.columns:
         N=0
         smooth=False
-        lower, upper = bounds(data)
+
+        if bounds is None: #find automatically
+#            left, right, lower, upper = find_bounds(data)
+            raise NotImplementedError("Neeed to code 'bounds' finder")
+
         while not smooth:
-            N+=20
+            N+=win_incr
             smoothed = data[tcn].rolling(N, 0, center=True, win_type='triang').mean()
-            override = 'max' if positive_max(data) else 'min'
             pts = find_all_peaks(smoothed, override=override)
             # if there exists a single peak within the bounds, it is now smooth
-            if len(pts[(lower <= data[tcn].iloc[pts].values) & \
-                       (data[tcn].iloc[pts].values <= upper)]) == 1:
+            valid_points = pts[(lower <= data[tcn].iloc[pts].values) & \
+                               (data[tcn].iloc[pts].values <= upper) & \
+                               (left <= time.iloc[pts].values) & \
+                               (time.iloc[pts].values <= right)]
+            if len(valid_points) <= thresh:
                 smooth = True
-            if N>500:
+#                plt.plot(time.iloc[valid_points], smoothed.iloc[valid_points],'k.')
+            if N>win_incr*25:
+                print('{} reached max smoothing: N = {}'.format(tcn, win_incr*25))
                 break
         smooth_data[tcn] = smoothed
 
