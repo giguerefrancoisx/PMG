@@ -10,7 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import PMG.COM.openbook as ob
 
-def import_data(directory, channels, tcns=None, sl=slice(None), check=True):
+def import_data(directory, channels, tcns=None, sl=slice(None), check=True, stage=1):
     """Import a channel's or channels' dataframe(s), cleaned of outliers. Optionally filter by
     list of tcns and slice. Set check to False to skip 'view  outliers' prompt
 
@@ -21,7 +21,7 @@ def import_data(directory, channels, tcns=None, sl=slice(None), check=True):
     channels : str or list
         channels for which to return data. If string, returns DataFrame rather than dictionary
     tcns : list
-        list of tcns to include. missing data will automatically be dropped
+        list of tcns to include. tcns missing data will automatically be dropped
     sl : slice object
         slice for rows.
     check : bool
@@ -48,9 +48,9 @@ def import_data(directory, channels, tcns=None, sl=slice(None), check=True):
         if tcns is not None:
             raw = raw.loc[:,tcns].dropna(axis=1)
         if check:
-            clean[channel] = check_and_clean(raw, stage=1)
+            clean[channel] = check_and_clean(raw, stage)
         else:
-            clean[channel] = clean_outliers(raw, stage=1)
+            clean[channel] = clean_outliers(raw, stage)
     if return_single:
         return t, clean[channel]
     else:
@@ -356,11 +356,30 @@ def smooth_peaks(data, time=None, win_incr=20, override=None, bounds=None, thres
 #
 #    plt.waitforbuttonpress()
 #%%
-def clean_outliers(data, stage): #TODO - restrict to range (eg: before 200ms)
+def clean_outliers(data, stage, interval=slice(None)):
+    """Clean the outliers from the data
+
+    Input
+    ---------
+    raw : DataFrame, list of DataFrames
+        Input raw data
+    stage : int 0-2
+        Degree of cleaning: 0 for not cleaning, 1 for huge spikes, 2 for far-from-average
+    interval : slice
+        For degree 2, slice on which the test should be performed. Often the
+        first 10 ms and last 200ms can fail the tests but are not in the
+        area of interest.
+
+    Returns
+    ----------
+    clean : DataFrame
+        Cleaned data
+    """
 
     if isinstance(data, list):
         data = pd.concat(data, axis=1)
     data = data.T[data.any()].T
+    untrimmed = data.copy()
 
     if stage not in [0,1,2]:
         raise ValueError('Invalid stage selection. Use 0, 1, or 2')
@@ -371,75 +390,86 @@ def clean_outliers(data, stage): #TODO - restrict to range (eg: before 200ms)
     if stage >= 1:
         """This stage should recover data that is not the result of defective mesurements"""
 
+#        tcns = []
+#        for tcn in data.columns:
+#            if (data[tcn]-data[tcn].rolling(3,0,center=True).mean()>10).any():
+#                tcns.append(tcn)
+#        data = data.drop(tcns, axis=1)
+        data = data.loc[:,~(data-data.rolling(3,0,center=True).mean()>10).any()]
+
         ### Slope Method
-        slopes = np.abs(np.diff(data.T)).max(axis=1)
-        mad = (data.T-data.T.median()).abs().median().T #outlier-adjusted std
-        low, high = data.median(axis=1)-3*mad, data.median(axis=1)+3*mad
-        thresh = (high.max()-low.min())*0.25 #(factor 0.25-0.5)
-        spikes = np.nonzero(slopes>thresh)[0]
-        data = data.drop(data.columns[spikes], axis=1)
+#        slopes = np.abs(np.diff(data.T)).max(axis=1)
+#        mad = (data.T-data.T.median()).abs().median().T #outlier-adjusted std
+#        low, high = data.median(axis=1)-3*mad, data.median(axis=1)+3*mad
+#        thresh = (high.max()-low.min())*0.25 #(factor 0.25-0.5)
+#        spikes = np.nonzero(slopes>thresh)[0]
+#        data = data.drop(data.columns[spikes], axis=1)
 
-        ### Variance of cummulative Method
-#        adj = (data**2).cumsum()
-#        last = adj.iloc[-1]
-#        last = last.sort_values()
-#
-#        thresh = 1.30 #threshold 1.30 < thresh < 1.38
-#        while last.std()/last[:-1].std() > thresh:
-#            last = last[:-1]
-#        data = data.loc[:,last.index]
-
+    data = data[interval]
     if stage == 2:
         """This stage should take accurate but unruly data and remove out-of-the-ordinary traces"""
-#        med = med = data.median(axis=1)
-#        high = (med+2*(data.max(axis=1)-med)).rolling(300,0,center=True,win_type='parzen').mean()
-#        low = (med+2*(data.min(axis=1)-med)).rolling(300,0,center=True,win_type='parzen').mean()
-#        too_high = ((data.T>high).T.sum()>5).nonzero()[0]
-#        too_low = ((data.T<low).T.sum()>5).nonzero()[0]
-#        out = np.unique(np.hstack([too_high,too_low]))
-#        data = data.drop(data.columns[out], axis=1)
-        pass
-        ### 4-Sigma deviation cummulative Method
-#        data_sum = ((data.T-data.median(axis=1)).T.abs()**0.5).cumsum()
-#        high = data_sum.mean(axis=1)+3*data_sum.std(axis=1)
-#        outside = (data_sum.T>high).T.sum(axis=0)
-#        outliers = np.nonzero(outside>200)[0]
-#        data = data.drop(data.columns[outliers], axis=1)
 
-        ### MAD above median cummulative deviation
-#        high = data.median(axis=1)+6*data[(data.T>data.median(axis=1)).T].mad(axis=1)
-#        low = data.median(axis=1)-6*data[(data.T<data.median(axis=1)).T].mad(axis=1)
-#        too_high = (data.T-high).T[(data.T>high).T].sum()
-#        too_low = (-data.T+low).T[(data.T<low).T].sum()
+        ### ratio of std dev
+##        plt.figure()
+##        plt.plot(untrimmed, alpha=0.2)
+##        tcns = []
+##        for tcn in data.columns:
+##            if ((data.std(axis=1)/data.drop(tcn,1).std(axis=1))>1.25).sum()>=30:
+##                tcns.append(tcn)
+##                plt.plot(data[tcn]/(data.std(axis=1)/data.drop(tcn,1).std(axis=1)>1.25))
+##        data = data.drop(tcns, axis=1)
+##        outliers = data.loc[:,tcns]
+##        plt.plot(outliers)
+#        std_ratio = data.apply(lambda x: data.std(axis=1)/data.drop(x.name,1).std(axis=1), axis=0)
+#        data = data.loc[:,~((std_ratio>1.25).sum()>30).any()]
 
-#        ### Influence on std:
-#        stddf = df.copy()
-#        for tcn in df.columns:
-#            stddf[tcn] = df.drop(tcn,axis=1).std(axis=1)
-#        mad_above = data.copy()
-#        mad_below = data.copy()
+        ### difference of std dev
+        window = {'window':30,'min_periods':0,'center':True,'win_type':'triang'}
+        roll = data.rolling(**window).mean()
+        std_diff = roll.apply(lambda x: roll.std(axis=1)-roll.drop(x.name,1).std(axis=1), axis=0)
+        data = data.loc[:,~(std_diff.rolling(**window).sum()>20).any()]
+#        roll = data.rolling(30,0,center=True,win_type='triang').mean()
+#        tcns = []
 #        for tcn in data.columns:
-#            tcns = 3 random tcns
-#            mad_above[tcn] = data[(data.T>data.median(axis=1)).T].drop(tcn,axis=1).mad(axis=1)
-#            mad_below[tcn] = data[(data.T<data.median(axis=1)).T].drop(tcn,axis=1).mad(axis=1)
-
-#        high = data.median(axis=1)+6*mad_above.min(axis=1)
-#        low = data.median(axis=1)-6*mad_below.min(axis=1)
-
-        ### Mean variance change for entire trace
+#            offset = (roll.std(axis=1)-roll.drop(tcn,1).std(axis=1)).rolling(30,0,center=True,win_type='triang').sum()
+#            if (offset>=20).any():
+#                tcns.append(tcn)
+#        data = data.drop(tcns, axis=1)
 
         ### Outliergram
 #        from PMG.outliergram import outliergram
 #        data, *_ = outliergram(data, mode='both', factorsh=1.5, factormg=1.5)
 
-    return data
+    return untrimmed[data.columns]
+#%% clean_outliers DEBUG
+#tr = 6
+#ln = 2
+#plt.close('all')
+#for ch in chlist:
+#    data = fulldata[ch]
+#    #data = clean_outliers(data, stage=1)
+#    plt.figure()
+#    plt.plot(data, alpha=0.2)
+#    plt.gca().set_prop_cycle(None)
+#    tcns = []
+#    for tcn in data.columns:
+#        plt.plot(data.std(axis=1)/data.drop(tcn,1).std(axis=1))
+#    plt.gca().set_prop_cycle(None)
+#    for tcn in data.columns:
+#        if ((data.std(axis=1)/data.drop(tcn,1).std(axis=1))>tr).sum()>=ln:
+#            tcns.append(tcn)
+#            plt.plot(data[tcn]/(data.std(axis=1)/data.drop(tcn,1).std(axis=1)>tr))
 
-def check_and_clean(raw, stage):
+#%%
+
+def check_and_clean(raw, stage, interval=slice(None)):
     """Check thats the data does not contain outliers as found by
     clean_outliers(). Prompts the user for whether a plot highlighting the
     outliers should be shown. Options are to retain or discard the outliers.
+
+    See clean_outliers() for details
     """
-    clean = clean_outliers(raw,  stage)
+    clean = clean_outliers(raw,  stage, interval)
     outliers = pd.concat([raw, clean], axis=1).T.drop_duplicates(keep=False).T
 
     if not outliers.empty:
@@ -450,7 +480,10 @@ def check_and_clean(raw, stage):
             plt.plot(clean, alpha=0.25)
             plt.plot(outliers)
             while not plt.waitforbuttonpress():
-                pass
+                try:
+                    pass
+                except KeyboardInterrupt:
+                    break
             plt.close('all')
             action = input("discard: any\nretain: 'keep'\n>>>")
 
@@ -516,31 +549,33 @@ def stats(df):
 
     return stats
 
-def statsNEW(df):
-    df = df.dropna(axis=1)
-
-    stats = {'Mean': df.mean(axis=1),
-             'Low': df.median(axis=1)-4*df[(df.T<df.median(axis=1)).T].mad(axis=1),
-             'High' : df.median(axis=1)+4*df[(df.T>df.median(axis=1)).T].mad(axis=1)}
-    stats = pd.DataFrame(data=stats)
-
-    not_too_high = df.T[(df.T>stats['High']).T.sum().sort_values()<200]
-    not_too_low = df.T[(df.T<stats['Low']).T.sum().sort_values()<200]
-    between = df[not_too_high.index.intersection(not_too_low.index)]
-
-    stats['Mean-between'] = between.mean(axis=1)
-
-    stats = stats.rolling(100, 0, center=True, win_type='parzen').mean()
-
-    return stats
+#def statsNEW(df):
+#    df = df.dropna(axis=1)
+#
+#    stats = {'Mean': df.mean(axis=1),
+#             'Low': df.median(axis=1)-4*df[(df.T<df.median(axis=1)).T].mad(axis=1),
+#             'High' : df.median(axis=1)+4*df[(df.T>df.median(axis=1)).T].mad(axis=1)}
+#    stats = pd.DataFrame(data=stats)
+#
+#    not_too_high = df.T[(df.T>stats['High']).T.sum().sort_values()<200]
+#    not_too_low = df.T[(df.T<stats['Low']).T.sum().sort_values()<200]
+#    between = df[not_too_high.index.intersection(not_too_low.index)]
+#
+#    stats['Mean-between'] = between.mean(axis=1)
+#
+#    stats = stats.rolling(100, 0, center=True, win_type='parzen').mean()
+#
+#    return stats
 
 def downsample(df, window):
+    #data.set_index(pd.to_datetime(data.index, unit='D')).resample('{}D'.format(5)).last()
     downsampled = df[::window].copy()
     for l, r in zip(downsampled.index, downsampled.index+window):
         downsampled.loc[l,:] = df.loc[l:r,:].mean(axis=0)
     return downsampled
 
 def upsample(df, window):
+    #data.resample('D').mean().fillna(method='ffill').rolling(5,0,center=True).mean().reset_index()
     upsampled = pd.DataFrame([], columns=df.columns,
                              index=range(df.index[0],df.index[-1]+window))
     for row in df.index:

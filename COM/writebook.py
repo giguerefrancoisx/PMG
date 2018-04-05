@@ -182,7 +182,7 @@ def writeHDF5(directory, chlist):
         if filename.endswith('.csv'):
             csvfiles.append(filename)
         converted = any([filename[:-4] in file for file in csvfiles])
-        if filename.endswith('.xls') and not converted:
+        if filename.endswith(['.xls','.xlsx']) and not converted:
             xlsonly.append(filename)
 
     if len(xlsonly) > 0:
