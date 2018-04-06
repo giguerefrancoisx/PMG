@@ -56,6 +56,8 @@ def colordict(data, by='order', values=None, n_levels=None):
     elif isinstance(values, clrs.ListedColormap):
         N = len(values.colors)-1
     elif isinstance(values, list):
+        if len(values)==1:
+            values = values*2
         n_levels = len(values) if n_levels is None else n_levels
         values = clrs.LinearSegmentedColormap.from_list('custom', values, n_levels)
         N = values.N-1
@@ -175,13 +177,13 @@ def ylabel(dimension, direction):
 
     return ylabel
 
-def legend(ax, loc, **kwargs):
+def legend(ax, **kwargs):
     """Removes duplicate line labels and creates legend at desired location"""
 
     from collections import OrderedDict
     handles, labels = ax.get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
-    lgd = ax.legend(by_label.values(), by_label.keys(), loc = loc, **kwargs)
+    lgd = ax.legend(by_label.values(), by_label.keys(), **kwargs)
     return lgd
 
 def maximize():
