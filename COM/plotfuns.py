@@ -66,11 +66,32 @@ def plot_full_2(t,data1,data2):
 
 # bar plot
 # to do: expand to plot variable number of inputs
-def plot_bar(ax, labels,data1,data2):
-    ax.bar(labels,[np.mean(data1),np.mean(data2)])
-    ax.plot([labels[0]],[data1],'.',markersize=10)
-    ax.plot([labels[1]],[data2],'.',markersize=10)
-    ax.errorbar(labels,[np.mean(data1),np.mean(data2)],yerr=[np.std(data1),np.std(data2)],ecolor='black',capsize=5,linestyle='none')
+def plot_bar(ax, data):
+    catlist = list(data.keys())
+    sample_mean = []
+    sample_std = []
+    for cat in catlist:
+        sample_mean.append(np.mean(data[cat]))
+        sample_std.append(np.std(data[cat]))
+    ax.bar(catlist,sample_mean)
+    for cat in catlist:
+        ax.plot([cat],[data[cat]],'.',markersize=10)
+    ax.errorbar(catlist,sample_mean,yerr=sample_std,ecolor='black',capsize=5,linestyle='none')
+    return ax
+
+def plot_cat_nobar(ax,data):
+    catlist = list(data.keys())
+    sample_mean = []
+    sample_std = []
+    maxcat = 0
+    for cat in catlist:
+        sample_mean.append(np.mean(data[cat]))
+        sample_std.append(np.std(data[cat]))
+        ax.plot([cat],[data[cat]],'.',markersize=10)
+        if len(data[cat])>maxcat:
+            maxcat = len(data[cat])
+    if maxcat > 1:
+        ax.errorbar(catlist,sample_mean,yerr=sample_std,ecolor='black',capsize=5,linestyle='none',marker='_',markersize=13,color='k')
     return ax
 
 # ecdf plot

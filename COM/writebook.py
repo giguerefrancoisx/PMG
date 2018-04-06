@@ -182,7 +182,7 @@ def writeHDF5(directory, chlist):
         if filename.endswith('.csv'):
             csvfiles.append(filename)
         converted = any([filename[:-4] in file for file in csvfiles])
-        if filename.endswith(['.xls','.xlsx']) and not converted:
+        if filename.endswith(('.xls','.xlsx')) and not converted:
             xlsonly.append(filename)
 
     if len(xlsonly) > 0:
@@ -191,7 +191,6 @@ def writeHDF5(directory, chlist):
         count = len(xlsonly)
         i = 1
         for filename in xlsonly:
-
             testframe = pandas.read_excel(directory+'/'+filename,
                                           sheetname=None, header=0,
                                           index_col=0, skiprows=[1,2])
