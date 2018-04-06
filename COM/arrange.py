@@ -18,6 +18,27 @@ def test_ch(data,channels,cutoff):
             chdata.set_value(f,ch,pd.DataFrame(data[f],columns=[ch]).get_values().flatten()[cutoff].tolist())
     return chdata
 
+def test_ch_from_chdict(data,cutoff):
+    channels = list(data.keys())
+    
+    # get names of files
+    files = []
+    for ch in channels:
+        newfiles = data[ch].keys()
+        for f in newfiles:
+            if not(f in files):
+                files.append(f)
+    
+    chdata = pd.DataFrame(index=files,columns=channels)
+    
+    for ch in channels:
+        for f in files:
+            if f in data[ch].keys():
+                chdata.set_value(f,ch,data[ch][f].get_values()[cutoff])
+            else:
+                chdata.set_value(f,ch,np.matlib.repmat(np.nan,1,len(list(cutoff))))
+    return chdata
+    
 # data is a dataframe
 def arrange_by_peak(data):
     nkey = len(data.keys())

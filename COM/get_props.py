@@ -19,14 +19,21 @@ def get_ipeak(data):
     
 # get value of peak 
 def peakval(data):
-    return [min(data), max(data)] # returns values of local min and local max
+    if np.isnan(data).all():
+        return [np.nan, np.nan]
+    else:
+        return [min(data), max(data)] # returns values of local min and local max
 
 def smooth_data(data):
     if data==[]:
         return []
+    elif np.isnan(data).all():
+        return np.nan
     return signal.savgol_filter(data,201,5)
 
 def get_i2peak(data):
+    if np.isnan(data).all():
+        return np.nan
     if data.size==0:
         return []
     if np.isnan(data).all():

@@ -41,16 +41,28 @@ def plot_full(t,linkMe,models,subplot_dim,fig_size):
 # to do: consolidate this with the above function
 def plot_full_2(t,data1,data2):
     files1 = data1.index
-    files2 = data2.index
     n1 = int(np.ceil(len(files1)/10))
-    n2 = int(np.ceil(len(files2)/10))
+    
+    if len(data2)>0:
+        files2 = data2.index
+        n2 = int(np.ceil(len(files2)/10))
+    else:
+        n2=0
+        
     fig, axs = plt.subplots(n1+n2,10,sharey='all',figsize=(40,4*(n1+n2)))
     for i, ax in enumerate(axs[:n1].flatten()[range(len(files1))]):
-        ax.plot(t,data1[i])
-        ax.set_title(files1[i])
-    for i, ax in enumerate(axs[n1:].flatten()[range(len(files2))]):
-        ax.plot(t,data2[i])
-        ax.set_title(files2[i])    
+        if len(data1[i]==1) and np.isnan(data1[i]).all():
+            continue
+        else:
+            ax.plot(t,data1[i])
+            ax.set_title(files1[i])
+    if len(data2)>0:
+        for i, ax in enumerate(axs[n1:].flatten()[range(len(files2))]):
+            if len(data2[i]==1) and np.isnan(data2[i]).all():
+                continue
+            else:
+                ax.plot(t,data2[i])
+                ax.set_title(files2[i])    
 
 # bar plot
 # to do: expand to plot variable number of inputs
