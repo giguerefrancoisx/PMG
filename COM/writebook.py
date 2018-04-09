@@ -181,8 +181,8 @@ def writeHDF5(directory, chlist):
     for filename in allfiles:
         if filename.endswith('.csv'):
             csvfiles.append(filename)
-        converted = any([filename[:-4] in file for file in csvfiles])
-        if filename.endswith(['.xls','.xlsx']) and not converted:
+        converted = any([filename[:filename.find('.')] in file for file in csvfiles])
+        if filename.endswith(('.xls','.xlsx')) and not converted:
             xlsonly.append(filename)
 
     if len(xlsonly) > 0:
@@ -200,8 +200,12 @@ def writeHDF5(directory, chlist):
             for sheet in testframe.values():
                 sheets.append(sheet)
             testframe = pandas.concat(sheets, axis=1)
-            start = int(numpy.searchsorted(testframe.loc[:,'T_10000_0'], -0.01001))
-            end = int(numpy.searchsorted(testframe.loc[:,'T_10000_0'], 0.3999))+1
+            try:
+                start = int(numpy.searchsorted(testframe.loc[:,'T_10000_0'], -0.01001))
+                end = int(numpy.searchsorted(testframe.loc[:,'T_10000_0'], 0.3999))+1
+            except KeyError as e:
+                raise KeyError('{} of test: {}. File has a different arangement '\
+                               'of data or is missing time column'.format(e, filename))
             testframe = testframe.iloc[start:end,:]
 
             testframe.to_csv(directory+filename[:-4]+'.csv', index=False)

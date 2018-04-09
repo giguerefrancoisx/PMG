@@ -7,28 +7,20 @@ Created on Fri Nov 10 11:43:05 2017
 
 @author: giguerf
 """
-#import os
 from PMG.COM.openbook import openHDF5
 from PMG.COM import table as tb, plotstyle as style, globplot as gplot
 
-table = tb.get('SLED')
+table = tb.get('PROJECT_NAME')
 
-SLED = 'P:/SLED/Data/'
-chlist = ['12HEAD0000Y7ACXA','12HEAD0000Y2ACXA',
-          '12CHST0000Y7ACXC','12CHST0000Y2ACXC',
-          '12PELV0000Y7ACXA','12PELV0000Y2ACXA']
+PATH = 'Path to Data Storage'
+chlist = ['Channel_0','Channel_1']
 
-time, fulldata = openHDF5(SLED, chlist)
+time, fulldata = openHDF5(PATH, chlist)
 
-savedir = 'P:/SLED/Plots/gplot/'
+savedir = 'Path to Figures'
 
-#readdir = os.fspath('P:/BOOSTER/SAI/'+dummy)
-#savedir = os.fspath('P:/BOOSTER/Plots/glob/') #'+dummy+'/')
-#
-#keys = [filename[:16] for filename in os.listdir(readdir)]
-#values = ['Chest', 'Illiac Lower L', 'Illiac Upper L', 'Illiac Lower R',
-#          'Illiac Upper R', 'Lumbar X', 'Lumbar Z', 'Pelvis']
-#places = dict(zip(keys, values))
+# Define objects used later on, if necessary
+
 
 # %% GENERATE ARGUMENTS - for use in function call
 
@@ -89,6 +81,7 @@ for figID in figlist:
     ###
     figtitledict[figID] = 'Figure title specific to each figure, appended to common title'
     filename[figID] = 'Filename specific to each figure'
+    ylabeldict = dict(zip(sublist, ['Highback','Highback','Lowback','Lowback']))
     ###
     for subID in sublist:
         datadict[figID][subID] = {}
