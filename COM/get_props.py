@@ -7,6 +7,7 @@ Created on Fri Feb 16 16:23:18 2018
 import numpy as np
 import scipy.signal as signal
 import pandas as pd
+from PMG.COM.intersection import intersection
 # get properties of curves
 
 
@@ -19,14 +20,21 @@ def get_ipeak(data):
     
 # get value of peak 
 def peakval(data):
-    return [min(data), max(data)] # returns values of local min and local max
+    if np.isnan(data).all():
+        return [np.nan, np.nan]
+    else:
+        return [min(data), max(data)] # returns values of local min and local max
 
 def smooth_data(data):
     if data==[]:
         return []
+    elif np.isnan(data).all():
+        return np.nan
     return signal.savgol_filter(data,201,5)
 
 def get_i2peak(data):
+    if np.isnan(data).all():
+        return np.nan
     if data.size==0:
         return []
     if np.isnan(data).all():
@@ -73,3 +81,27 @@ def get_Dt2peak(data):
                     t2 = data['t2peak'][ch2][sign][f]
                     out.set_value((ch2,f),(ch1,sign),t1-t2)         
     return out
+
+def get_fwhm(t,dataframe):
+    out = pd.DataFrame(index=dataframe.index,columns=dataframe.columns)
+    for col in dataframe.columns:
+        for i in dataframe.index:
+            data = dataframe[col][i]
+            
+            hm1 = np.matlib.repmat(np.min(data)/2,1,len(data))
+            hm2 = np.matlib.repmat(np.max(data)/2,1,len(data))
+            
+            fwhm1 = intersection(t,data,t,hm1)
+            fwhm2 = intersection(t,data,t,hm2)
+            
+            if len(fwhm1)<2:
+                fwhm1 = np.nan
+            else:
+                fwhm1 = fwhm1[-1]-fwhm1[0]
+            if len(fwhm2)<2:
+                fwhm2 = np.nan
+            else:
+                fwhm2 = fwhm2[-1]-fwhm2[0]
+            out.set_value()
+    
+    return [fwhm1, fwhm2]

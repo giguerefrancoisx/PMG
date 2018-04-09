@@ -41,24 +41,57 @@ def plot_full(t,linkMe,models,subplot_dim,fig_size):
 # to do: consolidate this with the above function
 def plot_full_2(t,data1,data2):
     files1 = data1.index
-    files2 = data2.index
     n1 = int(np.ceil(len(files1)/10))
-    n2 = int(np.ceil(len(files2)/10))
+    
+    if len(data2)>0:
+        files2 = data2.index
+        n2 = int(np.ceil(len(files2)/10))
+    else:
+        n2=0
+        
     fig, axs = plt.subplots(n1+n2,10,sharey='all',figsize=(40,4*(n1+n2)))
     for i, ax in enumerate(axs[:n1].flatten()[range(len(files1))]):
-        ax.plot(t,data1[i])
-        ax.set_title(files1[i])
-    for i, ax in enumerate(axs[n1:].flatten()[range(len(files2))]):
-        ax.plot(t,data2[i])
-        ax.set_title(files2[i])    
+        if len(data1[i]==1) and np.isnan(data1[i]).all():
+            continue
+        else:
+            ax.plot(t,data1[i])
+            ax.set_title(files1[i])
+    if len(data2)>0:
+        for i, ax in enumerate(axs[n1:].flatten()[range(len(files2))]):
+            if len(data2[i]==1) and np.isnan(data2[i]).all():
+                continue
+            else:
+                ax.plot(t,data2[i])
+                ax.set_title(files2[i])    
 
 # bar plot
 # to do: expand to plot variable number of inputs
-def plot_bar(ax, labels,data1,data2):
-    ax.bar(labels,[np.mean(data1),np.mean(data2)])
-    ax.plot([labels[0]],[data1],'.',markersize=10)
-    ax.plot([labels[1]],[data2],'.',markersize=10)
-    ax.errorbar(labels,[np.mean(data1),np.mean(data2)],yerr=[np.std(data1),np.std(data2)],ecolor='black',capsize=5,linestyle='none')
+def plot_bar(ax, data):
+    catlist = list(data.keys())
+    sample_mean = []
+    sample_std = []
+    for cat in catlist:
+        sample_mean.append(np.mean(data[cat]))
+        sample_std.append(np.std(data[cat]))
+    ax.bar(catlist,sample_mean)
+    for cat in catlist:
+        ax.plot([cat],[data[cat]],'.',markersize=10)
+    ax.errorbar(catlist,sample_mean,yerr=sample_std,ecolor='black',capsize=5,linestyle='none')
+    return ax
+
+def plot_cat_nobar(ax,data):
+    catlist = list(data.keys())
+    sample_mean = []
+    sample_std = []
+    maxcat = 0
+    for cat in catlist:
+        sample_mean.append(np.mean(data[cat]))
+        sample_std.append(np.std(data[cat]))
+        ax.plot([cat],[data[cat]],'.',markersize=10)
+        if len(data[cat])>maxcat:
+            maxcat = len(data[cat])
+    if maxcat > 1:
+        ax.errorbar(catlist,sample_mean,yerr=sample_std,ecolor='black',capsize=5,linestyle='none',marker='_',markersize=13,color='k')
     return ax
 
 # ecdf plot
