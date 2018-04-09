@@ -181,11 +181,7 @@ def writeHDF5(directory, chlist):
     for filename in allfiles:
         if filename.endswith('.csv'):
             csvfiles.append(filename)
-<<<<<<< HEAD
         converted = any([filename[:filename.find('.')] in file for file in csvfiles])
-=======
-        converted = any([filename[:-4] in file for file in csvfiles])
->>>>>>> e088380e6ea7528c29a3c1f21dee3e4e5dc5e033
         if filename.endswith(('.xls','.xlsx')) and not converted:
             xlsonly.append(filename)
 
