@@ -27,7 +27,6 @@ channels = ['12HEAD0000Y7ACXA','12CHST0000Y7ACXC','12PELV0000Y7ACXA']
 chname = dict(zip(channels, ['Head','Chest','Pelvis']))
 
 plt.close('all')
-
 for ch in channels:
 
     fig, axs = style.subplots(2,2, sharex='all', sharey='all')
@@ -46,6 +45,10 @@ for ch in channels:
     axs[3].set_xlabel('Time [s]')
     plt.tight_layout(rect=[0,0,1,0.95])
     plt.savefig('P:/SLED/Plots/Grid_All_'+chname[ch])
+
+#%%
+plt.close('all')
+for ch in channels:
 
     fig, axs = style.subplots(2,2, sharex='all', sharey='all')
     for i, (back, sled, ax) in enumerate(zip(['HB', 'HB','LB', 'LB'], ['old_accel','new_accel','old_accel','new_accel'], axs)):
@@ -70,7 +73,6 @@ for ch in channels:
 labels = dict(zip(['old_accel', 'new_accel'], ['Old Sled','New Sled']))
 fig, axs = style.subplots(2,2, sharex='all', sharey='all')
 axs = axs.reshape(2,2)
-#fig.suptitle('Chest and Pelvis')
 for j, ch in enumerate(['12CHST0000Y7ACXC','12PELV0000Y7ACXA']):
     axs[0,j].set_title(chname[ch])
     for i, (back, ax) in enumerate(zip(['HB', 'LB'], axs[:,j])):
