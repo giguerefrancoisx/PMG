@@ -98,11 +98,17 @@ if plotfigs:
                     continue
                 k = k + 1
                 raw = chdata[ch][s]
+                if np.isnan(raw).all():
+                    continue
                 smth = props['smth'][ch][s]
                 ipeak = props['ipeak'][ch][wherepeaks[i]][s]
 #                i2peak = props['i2peak'][ch][wherepeaks[i]][s]
-                fwhm_t = props['tfwhm'][ch][wherepeaks[i]][s][0::2]
-                fwhm_x = props['tfwhm'][ch][wherepeaks[i]][s][1::2]
+                if not(np.isnan(props['fwhm'][ch][wherepeaks[i]][s])):
+                    fwhm_t = props['tfwhm'][ch][wherepeaks[i]][s][0::2]
+                    fwhm_x = props['tfwhm'][ch][wherepeaks[i]][s][1::2]
+                else:
+                    fwhm_t = np.nan
+                    fwhm_x = np.nan
                 axs.flatten()[k].plot(t,raw,color=[cmap_r[j], cmap_g[j], cmap_b[j]],label="raw")
 #                axs.flatten()[k].plot(t,smth,color='k',linestyle='--',label="smooth")
                 axs.flatten()[k].plot(t[ipeak],raw[ipeak],'.',color="r",markersize=10,label='peak')
