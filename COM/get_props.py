@@ -34,7 +34,7 @@ def smooth_data(data):
 
 def get_i2peak(data):
     if np.isnan(data).all():
-        return np.nan
+        return [np.nan, np.nan]
     if data.size==0:
         return []
     if np.isnan(data).all():

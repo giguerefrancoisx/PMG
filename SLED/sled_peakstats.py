@@ -20,25 +20,42 @@ dummy = 'Y2'
 plotfigs = 1
 savefigs = 1
 writefiles = 1
-
+usesmth = 0
+exclude = ['SE16-0395',
+           'SE16-0399',
+           'SE16-0402',
+           'SE16-1012_2',
+           'SE17-1015_2',
+           'SE17-1025_2']
 #%%
 table = tb.get('SLED')
 directory = 'P:\\SLED\\Data\\'
 if dummy=='Y7':
-    channels = ['12CHST0000Y7DSXB',
-                '12HEAD0000Y7ACRA',
-                '12CHST0000Y7ACRC',
-                '12PELV0000Y7ACRA']
-    wherepeaks = np.array(['-tive','+tive','+tive','+tive'])
+#    channels = ['12CHST0000Y7DSXB',
+#                '12HEAD0000Y7ACRA',
+#                '12CHST0000Y7ACRC',
+#                '12PELV0000Y7ACRA']
+#    wherepeaks = np.array(['-tive','+tive','+tive','+tive'])
+#    channels = ['12HEAD0000Y7ACXA',
+#                '12CHST0000Y7ACXC']
+#    wherepeaks = np.array(['-tive','-tive'])
+    channels = ['12PELV0000Y7ACXA']
+    wherepeaks = np.array(['-tive'])
 elif dummy=='Y2':
-    channels = ['12HEAD0000Y2ACRA',
-                '12CHST0000Y2ACRC',
-                '12PELV0000Y2ACRA']
+#    channels = ['12HEAD0000Y2ACRA',
+#                '12CHST0000Y2ACRC',
+#                '12PELV0000Y2ACRA']
+#    wherepeaks = np.array(['+tive','+tive','+tive'])
+    channels = ['12HEAD0000Y2ACXA',
+                '12CHST0000Y2ACXC',
+                '12PELV0000Y2ACXA']
     wherepeaks = np.array(['+tive','+tive','+tive'])
 cutoff = range(100,1600)
 
 table_y7 = table.query('DUMMY==\'' + dummy + '\'').filter(items=['SE','MODEL','SLED'])
 table_y7 = table_y7.set_index('SE',drop=True)
+if not(exclude==[]):
+    table_y7 = table_y7.drop(exclude,axis=0)
 models = np.unique(table_y7['MODEL'])
 sleds = np.unique(table_y7['SLED'])
 
@@ -48,15 +65,24 @@ t = t.get_values()[cutoff]
 writename = 'C:\\Users\\tangk\\Python\\Sled_' + dummy + '_'
 
 #%%
-props = {'peak':arrange.arrange_by_peak(chdata.applymap(peakval)).append(pd.DataFrame(index=['cdf'])),
-          'ipeak':arrange.arrange_by_peak(chdata.applymap(get_ipeak)),
-          'smth':chdata.applymap(smooth_data)}
-props.update({'i2peak':arrange.arrange_by_peak(props['smth'].applymap(get_i2peak)),
-               'stats':pd.DataFrame(index=['peak','t2peak','BSp_peak','BSp_t2peak'],columns=props['peak'].columns)})
-props['t2peak'] = get_t2peak(t,props['i2peak']).append(pd.DataFrame(index=['cdf']))
-props['fwhm'] = arrange.arrange_by_peak(get_fwhm(t,chdata)).append(pd.DataFrame(index=['cdf']))
-props['tfwhm'] = arrange.arrange_by_peak(get_tfwhm(t,chdata))
-
+print('getting props...')
+if not(usesmth):
+    props = {'peak':arrange.arrange_by_peak(chdata.applymap(peakval)).append(pd.DataFrame(index=['cdf'])),
+              'ipeak':arrange.arrange_by_peak(chdata.applymap(get_ipeak)),
+              'smth':chdata.applymap(smooth_data)}
+    props.update({'i2peak':arrange.arrange_by_peak(props['smth'].applymap(get_i2peak)),
+                   'stats':pd.DataFrame(index=['peak','t2peak','BSp_peak','BSp_t2peak'],columns=props['peak'].columns)})
+    props['t2peak'] = get_t2peak(t,props['i2peak']).append(pd.DataFrame(index=['cdf']))
+    props['fwhm'] = arrange.arrange_by_peak(get_fwhm(t,chdata)).append(pd.DataFrame(index=['cdf']))
+    props['tfwhm'] = arrange.arrange_by_peak(get_tfwhm(t,chdata))
+else:
+    props = {'smth':chdata.applymap(smooth_data)}
+    props['peak'] = arrange.arrange_by_peak(props['smth'].applymap(peakval)).append(pd.DataFrame(index=['cdf']))
+    props['ipeak'] = arrange.arrange_by_peak(props['smth'].applymap(get_ipeak))
+    props['i2peak'] = arrange.arrange_by_peak(props['smth'].applymap(get_i2peak))
+    props['t2peak'] = get_t2peak(t,props['i2peak']).append(pd.DataFrame(index=['cdf']))
+    props['fwhm'] = arrange.arrange_by_peak(get_fwhm(t,props['smth'])).append(pd.DataFrame(index=['cdf']))
+    props['tfwhm'] = arrange.arrange_by_peak(get_tfwhm(t,props['smth']))
 #%% plot mean +/- std and distributions
 if plotfigs:
     # compare across sleds for each model
@@ -71,11 +97,15 @@ if plotfigs:
                     if len(se)==0:
                         x[s] = [np.nan]
                     else:
-                        x[s] = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
+                        xs = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
+                        if len(xs)>0:
+                            x[s] = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
+                        else:
+                            x[s] = [np.nan]
                 ax = plot_cat_nobar(ax,x)
                 ax.set_title(p + '-' + ch + '\n ' + m)
                 if savefigs:
-                    fig.savefig(writename + p + '_' + ch + '_' + m + '_' + wherepeaks[i] + '_bar.png', bbox_inches='tight')
+                    fig.savefig(writename + p + '_' + ch + '_' + m + '_' + wherepeaks[i] + '_dot.png', bbox_inches='tight')
                 plt.show()
                 plt.close(fig) 
 
@@ -104,7 +134,7 @@ if plotfigs:
                     continue
                 smth = props['smth'][ch][s]
                 ipeak = props['ipeak'][ch][wherepeaks[i]][s]
-#                i2peak = props['i2peak'][ch][wherepeaks[i]][s]
+                i2peak = props['i2peak'][ch][wherepeaks[i]][s]
                 if not(np.isnan(props['fwhm'][ch][wherepeaks[i]][s])):
                     fwhm_t = props['tfwhm'][ch][wherepeaks[i]][s][0::2]
                     fwhm_x = props['tfwhm'][ch][wherepeaks[i]][s][1::2]
@@ -112,7 +142,8 @@ if plotfigs:
                     fwhm_t = np.nan
                     fwhm_x = np.nan
                 axs.flatten()[k].plot(t,raw,color=[cmap_r[j], cmap_g[j], cmap_b[j]],label="raw")
-#                axs.flatten()[k].plot(t,smth,color='k',linestyle='--',label="smooth")
+                if usesmth:
+                    axs.flatten()[k].plot(t,smth,color='k',label="smooth")
                 axs.flatten()[k].plot(t[ipeak],raw[ipeak],'.',color="r",markersize=10,label='peak')
 #                axs.flatten()[k].plot(t[i2peak],raw[i2peak],'.',color='b',markersize=10,label='t2peak')
                 axs.flatten()[k].plot(fwhm_t,fwhm_x,color='k',label='FWHM')
