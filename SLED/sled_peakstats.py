@@ -16,34 +16,36 @@ from scipy.stats import cumfreq
 from PMG.read_data import read_merged
 from PMG.COM import table as tb
 
+dummy = 'Y2'
+plotfigs = 1
+savefigs = 1
+writefiles = 1
+
+#%%
 table = tb.get('SLED')
 directory = 'P:\\SLED\\Data\\'
-channels = ['12CHST0000Y7DSXB',
-            '12HEAD0000Y7ACRA',
-            '12CHST0000Y7ACRC']
-wherepeaks = np.array(['-tive','+tive','+tive'])
-#channels = ['12HEAD0000Y2ACRA',
-#            '12CHST0000Y2ACRC']
-#wherepeaks = np.array(['+tive','+tive'])
+if dummy=='Y7':
+    channels = ['12CHST0000Y7DSXB',
+                '12HEAD0000Y7ACRA',
+                '12CHST0000Y7ACRC',
+                '12PELV0000Y7ACRA']
+    wherepeaks = np.array(['-tive','+tive','+tive','+tive'])
+elif dummy=='Y2':
+    channels = ['12HEAD0000Y2ACRA',
+                '12CHST0000Y2ACRC',
+                '12PELV0000Y2ACRA']
+    wherepeaks = np.array(['+tive','+tive','+tive'])
 cutoff = range(100,1600)
 
-table_y7 = table.query('DUMMY==\'Y7\'').filter(items=['SE','MODEL','SLED'])
+table_y7 = table.query('DUMMY==\'' + dummy + '\'').filter(items=['SE','MODEL','SLED'])
 table_y7 = table_y7.set_index('SE',drop=True)
 models = np.unique(table_y7['MODEL'])
 sleds = np.unique(table_y7['SLED'])
 
 t, fulldata = import_data(directory,channels,tcns=table_y7.index)
 chdata = arrange.test_ch_from_chdict(fulldata,cutoff)
-#chdata = pd.concat([table_y7,chdata],axis=1)
 t = t.get_values()[cutoff]
-
-plotfigs = 1
-savefigs = 1
-writefiles = 1
-bs_n_it = 5000
-bs_alpha = 0.05
-bs_nbin = [25,25]
-writename = 'C:\\Users\\tangk\\Python\\Sled_Y7_'
+writename = 'C:\\Users\\tangk\\Python\\Sled_' + dummy + '_'
 
 #%%
 props = {'peak':arrange.arrange_by_peak(chdata.applymap(peakval)).append(pd.DataFrame(index=['cdf'])),
