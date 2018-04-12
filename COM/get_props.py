@@ -88,20 +88,52 @@ def get_fwhm(t,dataframe):
         for i in dataframe.index:
             data = dataframe[col][i]
             
-            hm1 = np.matlib.repmat(np.min(data)/2,1,len(data))
-            hm2 = np.matlib.repmat(np.max(data)/2,1,len(data))
-            
-            fwhm1 = intersection(t,data,t,hm1)
-            fwhm2 = intersection(t,data,t,hm2)
-            
-            if len(fwhm1)<2:
-                fwhm1 = np.nan
-            else:
-                fwhm1 = fwhm1[-1]-fwhm1[0]
-            if len(fwhm2)<2:
-                fwhm2 = np.nan
-            else:
-                fwhm2 = fwhm2[-1]-fwhm2[0]
-            out.set_value()
+            if np.isnan(data).all():
+                out.set_value(i,col,[np.nan,np.nan])
+            else:     
+                hm1 = np.matlib.repmat(np.min(data)/2,len(data),1)
+                hm2 = np.matlib.repmat(np.max(data)/2,len(data),1)
+                
+                fwhm1 = intersection(t,data,t,hm1)
+                fwhm2 = intersection(t,data,t,hm2)
+                
+                if len(fwhm1[0])<2:
+                    fwhm1 = np.nan
+                else:
+                    fwhm1 = fwhm1[0][-1]-fwhm1[0][0]
+                if len(fwhm2[0])<2:
+                    fwhm2 = np.nan
+                else:
+                    fwhm2 = fwhm2[0][-1]-fwhm2[0][0]
+                out.set_value(i,col,[fwhm1, fwhm2])
     
-    return [fwhm1, fwhm2]
+    return out
+
+def get_tfwhm(t,dataframe):
+    out = pd.DataFrame(index=dataframe.index,columns=dataframe.columns)
+    for col in dataframe.columns:
+        for i in dataframe.index:
+            data = dataframe[col][i]
+            
+            if np.isnan(data).all():
+                out.set_value(i,col,[np.nan,np.nan])
+            else:
+                hm1 = np.matlib.repmat(np.min(data)/2,len(data),1)
+                hm2 = np.matlib.repmat(np.max(data)/2,len(data),1)
+                
+                fwhm1 = intersection(t,data,t,hm1)
+                fwhm2 = intersection(t,data,t,hm2)
+                
+                if len(fwhm1[0])<2:
+                    fwhm1 = np.nan
+                else:
+                    fwhm1 = [fwhm1[0][0],fwhm1[1][0],fwhm1[0][-1],fwhm1[1][-1]]
+                if len(fwhm2[0])<2:
+                    fwhm2 = np.nan
+                else:
+                    fwhm2 = [fwhm2[0][0],fwhm2[1][0],fwhm2[0][-1],fwhm2[1][-1]]
+                out.set_value(i,col,[fwhm1, fwhm2])
+    return out
+
+def get_mean(data):
+    return np.mean(data)

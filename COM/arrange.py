@@ -52,7 +52,8 @@ def arrange_by_peak(data):
     
     for ch in data.keys():
         for i in data.index:
-            out.set_value(i,ch,data.get_value(i,ch))
+            out.set_value(i,(ch,'-tive'),data.get_value(i,ch)[0])
+            out.set_value(i,(ch,'+tive'),data.get_value(i,ch)[1])
     return out
 
 def get_values(data):
