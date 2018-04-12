@@ -21,7 +21,8 @@ def make_labels(raw, project, tcns):
         table2.columns = table.columns[3:6].tolist()+table.columns[0:3].tolist()+table.columns[6:].tolist()
         table = pd.concat([table, table2])
         column = 'CIBLE'
-        keys = ['SUBSET', 'VITESSE', 'TCN', 'CBL_MODELE']
+        keys = ['TCN', 'CBL_MODELE']
+#        keys = ['SUBSET', 'VITESSE', 'TCN', 'CBL_MODELE']
         shortkeys = ['TCN', 'CBL_MODELE']
         slicer = dict(zip(keys, [slice(3),slice(None),slice(None),slice(None)]))
 
@@ -132,8 +133,8 @@ def plot_clusters(raw, t, Z, N, name, lbd, labels, plot_all, output):
     return tcns
 
 def plot_dendrograms(Z, name, labels, output):
-    plt.figure(name, figsize=[16, 12])
-    hierarchy.dendrogram(Z, orientation='left', leaf_font_size=10,
+    plt.figure(name, figsize=[5, 3])
+    hierarchy.dendrogram(Z, orientation='left', leaf_font_size=6,
                          labels=labels, distance_sort='ascending')
     plt.tight_layout()
     plt.savefig(output+name+'_dendrogram.png')
@@ -248,7 +249,7 @@ def cluster(channel, sl, path, project, output, N=6, tcns=None, norm=True,
     count = reversed(range(int(m*(m-1)/2)))
 
     Yd = pdist(X, metric=dtw_dist)
-#    Ye = pdist(X, metric='euclidean')
+    Ye = pdist(X, metric='euclidean')
 
     if matrix:
         dist_matrix(Yd, labels)
@@ -256,8 +257,8 @@ def cluster(channel, sl, path, project, output, N=6, tcns=None, norm=True,
     plt.close('all')
 
     clusters = {}
-    #for metric, Y in zip(['d','e'],[Yd, Ye]):
-    for metric, Y in zip([tag],[Yd]):
+    for metric, Y in zip(['d','e'],[Yd, Ye]):
+#    for metric, Y in zip([tag],[Yd]):
         for method in ['centroid', 'ward', 'average', 'weighted', 'complete']:
             Z = hierarchy.linkage(Y, method=method)
             name = '_'.join([method, metric])
@@ -279,17 +280,17 @@ if __name__ == '__main__':
 #              '11CHST0000H3ACXC', '11CHST0000THACXC', '11NECKLO00THFOXA',
 #              '11PELV0000H3ACXA', '11PELV0000THACXA']
 #    channel = chlist[7]
-    channel = '11ILACRI00THMOYA'
+    channel = '10CVEHCG0000ACXD'
     sl = slice(100,1600)
-    path = os.fspath('P:/AHEC/DATA/THOR/')
-    project = 'THOR'
+    path = os.fspath('P:/AHEC/DATA/Full Sample/48/')
+    project = 'AHEC'
     output = 'P:/AHEC/Plots/Clustering/THOR/'
 #    tcns = ['TC15-163', 'TC11-008', 'TC09-027', 'TC14-035', 'TC13-007',
 #            'TC12-003', 'TC17-201', 'TC17-209', 'TC17-212', 'TC15-162',
 #            'TC12-217', 'TC14-220', 'TC12-501', 'TC14-139', 'TC16-013',
 #            'TC14-180', 'TC17-211', 'TC16-129', 'TC17-025', 'TC17-208']
-    table = pd.read_excel('P:/AHEC/thortable.xlsx', sheetname='All')
-    tcns = table[table['CBL_BELT'].isin(['SLIP','OK']) & table['TYPE'].isin(['Frontale/Véhicule'])]['CIBLE'].tolist()
+    table = pd.read_excel('P:/AHEC/ahectable.xlsx')
+    tcns = table[table.SUBSET.isin(['HEV vs ICE']) & table.VITESSE.isin([48])].CIBLE.tolist()+table[table.SUBSET.isin(['HEV vs ICE']) & table.VITESSE.isin([48])].BELIER.tolist()
 #    import PMG.COM.table as tb
 #    slip, ok = tb.tcns(tb.split(tb.get(project), 'CBL_BELT', ['SLIP','OK']))
 #    tcns = slip+ok
@@ -298,7 +299,7 @@ if __name__ == '__main__':
 
     clusters, *data = cluster(channel, sl, path, project, output, N=4, tcns=tcns,
                        norm=False, smooth=True, plot_all=True, plot_data=True,
-                       matrix=False, tag='ILAC-n')
+                       matrix=False, tag='VCG-n')
 
 #%% Time stuff
 #import time as timer

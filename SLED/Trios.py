@@ -53,7 +53,7 @@ for trio in 'ABCDEFGHIJKLMNOPQRSTU':
     h, l = axs[0].get_legend_handles_labels()
     axs[3].legend(h, l, loc='upper left')
     plt.tight_layout()
-    plt.savefig('P:/SLED/Plots/'+'-'.join([name[:4] for name in model.split(' ')]).upper()+'_'+trio)
+    plt.savefig('P:/SLED/Plots/Trios/'+'-'.join([name[:4] for name in model.split(' ')]).upper()+'_'+trio)
     plt.close('all')
 #%%
 plt.close('all')
@@ -86,5 +86,5 @@ for trio in 'EGR':
     h, l = axs[0].get_legend_handles_labels()
     axs[3].legend(h, l, loc='upper left')
     plt.tight_layout()
-    plt.savefig('P:/SLED/Plots/'+'-'.join([name[:4] for name in model.split(' ')]).upper()+'_'+trio+'_extra')
+    plt.savefig('P:/SLED/Plots/Trios/'+'-'.join([name[:4] for name in model.split(' ')]).upper()+'_'+trio+'_extra')
 plt.close('all')

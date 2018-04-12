@@ -45,7 +45,27 @@ for ch in channels:
     axs[3].set_xlabel('Time [s]')
     plt.tight_layout(rect=[0,0,1,0.95])
     plt.savefig('P:/SLED/Plots/Grid_All_'+chname[ch])
-
+#%%
+plt.close('all')
+labels = dict(zip(['old_accel', 'new_accel'], ['Old Sled','New Sled']))
+fig, axs = style.subplots(2,2, sharex='all', sharey='all')
+axs = axs.reshape(2,2)
+for j, ch in enumerate(['12CHST0000Y7ACXC','12PELV0000Y7ACXA']):
+    axs[0,j].set_title(chname[ch])
+    for i, (back, ax) in enumerate(zip(['HB', 'LB'], axs[:,j])):
+        for sled in ['old_accel','new_accel']:
+            SEs = table[table.BACK.isin([back]) & table.SLED.isin([sled])].SE.tolist()
+            data = fulldata[ch].loc[:,SEs].rolling(20,0,center=True,win_type='triang').mean()
+            ax.plot(time, data, color=colors[back+sled], label=labels[sled]+', n={}'.format(data.shape[1]))
+        style.legend(ax, loc='lower right')
+axs[0,0].set_ylabel('Highback')
+axs[1,0].set_ylabel('Lowback')
+axs[1,0].set_xlabel('Time [s]')
+axs[1,1].set_xlabel('Time [s]')
+axs[-1,-1].set_xlim(0,0.12)
+axs[-1,-1].set_ylim(-65,15)
+plt.tight_layout(rect=[0,0,1,0.95])
+plt.savefig('P:/SLED/Plots/Grid_All_Chest_Pelvis')
 #%%
 plt.close('all')
 for ch in channels:
@@ -70,6 +90,7 @@ for ch in channels:
     plt.savefig('P:/SLED/Plots/Grid_Means_'+chname[ch])
     plt.close('all')
 #%%
+plt.close('all')
 labels = dict(zip(['old_accel', 'new_accel'], ['Old Sled','New Sled']))
 fig, axs = style.subplots(2,2, sharex='all', sharey='all')
 axs = axs.reshape(2,2)
