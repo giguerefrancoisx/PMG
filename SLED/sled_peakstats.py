@@ -16,7 +16,7 @@ from scipy.stats import cumfreq
 from PMG.read_data import read_merged
 from PMG.COM import table as tb
 
-dummy = 'Y2'
+dummy = 'Y6'
 plotfigs = 1
 savefigs = 1
 writefiles = 1
@@ -31,25 +31,24 @@ exclude = ['SE16-0395',
 table = tb.get('SLED')
 directory = 'P:\\SLED\\Data\\'
 if dummy=='Y7':
-#    channels = ['12CHST0000Y7DSXB',
-#                '12HEAD0000Y7ACRA',
-#                '12CHST0000Y7ACRC',
-#                '12PELV0000Y7ACRA']
-#    wherepeaks = np.array(['-tive','+tive','+tive','+tive'])
-#    channels = ['12HEAD0000Y7ACXA',
-#                '12CHST0000Y7ACXC']
-#    wherepeaks = np.array(['-tive','-tive'])
-    channels = ['12PELV0000Y7ACXA']
-    wherepeaks = np.array(['-tive'])
+    channels = ['12CHST0000Y7DSXB',
+                '12HEAD0000Y7ACRA',
+                '12CHST0000Y7ACRC',
+                '12PELV0000Y7ACRA',
+                '12HEAD0000Y7ACXA',
+                '12CHST0000Y7ACXC']
+    wherepeaks = np.array(['-tive','+tive','+tive','+tive','-tive','-tive'])
+
+#    channels = ['12PELV0000Y7ACXA']
+#    wherepeaks = np.array(['-tive'])
 elif dummy=='Y2':
-#    channels = ['12HEAD0000Y2ACRA',
-#                '12CHST0000Y2ACRC',
-#                '12PELV0000Y2ACRA']
-#    wherepeaks = np.array(['+tive','+tive','+tive'])
-    channels = ['12HEAD0000Y2ACXA',
+    channels = ['12HEAD0000Y2ACRA',
+                '12CHST0000Y2ACRC',
+                '12PELV0000Y2ACRA',
+                '12HEAD0000Y2ACXA',
                 '12CHST0000Y2ACXC',
                 '12PELV0000Y2ACXA']
-    wherepeaks = np.array(['+tive','+tive','+tive'])
+    wherepeaks = np.array(['+tive','+tive','+tive','+tive','+tive','+tive'])
 cutoff = range(100,1600)
 
 table_y7 = table.query('DUMMY==\'' + dummy + '\'').filter(items=['SE','MODEL','SLED'])
