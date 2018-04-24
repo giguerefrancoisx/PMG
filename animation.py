@@ -21,7 +21,7 @@ chlist = ['12HEAD0000Y7ACXA','12HEAD0000Y2ACXA',
 
 time, fulldata = openHDF5(SLED, chlist)
 
-raw = fulldata['12PELV0000Y7ACXA'].iloc[:,1]
+raw = fulldata['12PELV0000Y7ACXA'].iloc[:,0]
 
 #%% Animation
 fig, ax = plt.subplots(figsize=(5, 3))
@@ -63,9 +63,9 @@ run_animation()
 #%% Slider
 plt.close('all')
 fig, ax = plt.subplots(figsize=(5,3))
-gs = gridspec.GridSpec(4,4)
-ax1 = plt.subplot(gs[:3, :])
-ax2 = plt.subplot(gs[3, :])
+gs = gridspec.GridSpec(2, 1, height_ratios=[4,1])
+ax1 = plt.subplot(gs[0])
+ax2 = plt.subplot(gs[1])
 #ax.set(xlim=(-3, 3), ylim=(-1, 1))
 ax1.plot(raw, 'k')
 
@@ -84,4 +84,38 @@ def update(val):
     text.set_text(w)
 
 slider1.on_changed(update)
+plt.show()
+
+#%% Slider 2
+import scipy.signal as signal
+plt.close('all')
+fig, ax = plt.subplots(figsize=(5,3))
+gs = gridspec.GridSpec(3, 1, height_ratios=[4,1,1])
+ax1 = plt.subplot(gs[0])
+ax2 = plt.subplot(gs[1])
+ax3 = plt.subplot(gs[2])
+#ax.set(xlim=(-3, 3), ylim=(-1, 1))
+ax1.plot(raw, 'k')
+
+slider1 = Slider(ax2, 'Window1', 0, 200, valinit=30, valfmt='%1.0f')
+slider2 = Slider(ax3, 'Window2', 0, 200, valinit=30, valfmt='%1.0f')
+line = ax1.plot(raw.rolling(slider1.valinit+1,0,center=True,win_type='parzen').mean(), color='b', lw=2)[0]
+line2 = ax1.plot(signal.savgol_filter(raw,slider2.valinit+1,3), color='g', lw=2)[0]
+#line3 = ax1.plot(raw.rolling(slider1.valinit+1,0,center=True,win_type='boxcar').mean(), color='r', lw=2)[0]
+text = ax1.text(0.1,0.1,'30',transform=ax1.transAxes)
+
+
+def update(val):
+    w = int(round(val/2)*2)
+    line.set_ydata(raw.rolling(w+1,0,center=True,win_type='parzen').mean())
+#    line2.set_ydata(raw.rolling(w+1,0,center=True,win_type='parzen').mean().rolling(w+1,0,center=True,win_type='parzen').mean())
+#    line3.set_ydata(raw.rolling(w+1,0,center=True,win_type='boxcar').mean())
+    text.set_text(w)
+
+def update2(val):
+    w = int(round(val/2)*2)
+    line2.set_ydata(signal.medfilt(raw,w+1))
+
+slider1.on_changed(update)
+slider2.on_changed(update2)
 plt.show()
