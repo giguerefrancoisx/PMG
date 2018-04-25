@@ -28,12 +28,7 @@ fig, ax = plt.subplots(figsize=(5, 3))
 #ax.set(xlim=(-3, 3), ylim=(-1, 1))
 ax.plot(raw, 'k')
 
-windows = range(0,101,2)
-
-F = [0]*len(windows)
-for i , w in enumerate(windows):
-    F[i] = raw.rolling(w+1,0,center=True,win_type='parzen').mean()
-line = ax.plot(F[0], color='b', lw=2)[0]
+line = ax.plot(raw, color='b', lw=2)[0]
 text = ax.text(0.1,0.1,'0',transform=ax.transAxes)
 
 def run_animation():
@@ -48,16 +43,15 @@ def run_animation():
             anim.event_source.start()
             anim_running = True
 
-    def animFunc(i):
-        line.set_ydata(F[i])
-        text.set_text(windows[i])
+    def animFunc(w):
+        line.set_ydata(raw.rolling(w+1,0,center=True,win_type='parzen').mean())
+        text.set_text(w)
 
     fig.canvas.mpl_connect('button_press_event', onClick)
 
-    anim = FuncAnimation(fig, animFunc, interval=100, frames=len(F))
+    anim = FuncAnimation(fig, animFunc, interval=100, frames=range(0,101,2))
 
 run_animation()
-
 #anim.save('filename.mp4')
 #anim.save('filename.gif', writer='imagemagick')
 #%% Slider
