@@ -16,10 +16,10 @@ from scipy.stats import cumfreq
 from PMG.read_data import read_merged
 from PMG.COM import table as tb
 
-dummy = 'Y2'
+dummy = 'Y7'
 plotfigs = 1
-savefigs = 0
-writefiles = 0
+savefigs = 1
+writefiles = 1
 usesmth = 0
 
 #%%
@@ -33,7 +33,7 @@ if dummy=='Y7':
                 '12HEAD0000Y7ACXA',
                 '12CHST0000Y7ACXC']
     wherepeaks = np.array(['-tive','+tive','+tive','+tive','-tive','-tive'])
-    exclude = []
+    exclude = ['SE16-0204']
 #    channels = ['12PELV0000Y7ACXA']
 #    wherepeaks = np.array(['-tive'])
 elif dummy=='Y2':
@@ -69,6 +69,10 @@ chdata = arrange.test_ch_from_chdict(fulldata,cutoff)
 t = t.get_values()[cutoff]
 writename = 'C:\\Users\\tangk\\Python\\Sled_' + dummy + '_'
 
+
+cmap_r = np.linspace(252,63,num=len(sleds))/255
+cmap_g = np.linspace(70,94,num=len(sleds))/255
+cmap_b = np.linspace(107,251,num=len(sleds))/255
 #%%
 print('getting props...')
 if not(usesmth):
@@ -111,16 +115,13 @@ if plotfigs:
                     fig = plt.figure(figsize=(5,5))
                     ax = plt.axes()
                     ax = plot_cat_nobar(ax,x)
-                    ax.set_title(p + '-' + ch + '\n ' + m + ' ' + t)
+                    ax.set_title(p + '-' + ch + '\n ' + m + ' ' + tp)
                     if savefigs:
-                        fig.savefig(writename + 'dot_' + ch + '_' + p + '_' + t + '_' + m + '_' + wherepeaks[i] + '.png', bbox_inches='tight')
+                        fig.savefig(writename + 'dot_' + ch + '_' + p + '_' + tp + '_' + m + '_' + wherepeaks[i] + '.png', bbox_inches='tight')
                     plt.show()
                     plt.close(fig) 
 
 #%% plot curves and characteristics on curve
-cmap_r = np.linspace(252,63,num=len(sleds))/255
-cmap_g = np.linspace(70,94,num=len(sleds))/255
-cmap_b = np.linspace(107,251,num=len(sleds))/255
 if plotfigs:
     for i, ch in enumerate(channels):
         n = int(np.ceil(np.sum(table_y7['SLED']=='new_accel')/10)) + int(np.ceil(np.sum(table_y7['SLED']=='new_decel')/10)) + int(np.ceil(np.sum(table_y7['SLED']=='old_accel')/10))
@@ -153,16 +154,16 @@ if plotfigs:
                 if usesmth:
                     axs.flatten()[k].plot(t,smth,color='k',label="smooth")
                 axs.flatten()[k].plot(t[ipeak],raw[ipeak],'.',color="r",markersize=10,label='peak')
-#                axs.flatten()[k].plot(t[i2peak],raw[i2peak],'.',color='b',markersize=10,label='t2peak')
+                axs.flatten()[k].plot(t[i2peak],raw[i2peak],'*',color='b',markersize=10,label='t2peak')
                 axs.flatten()[k].plot(fwhm_t,fwhm_x,color='k',label='FWHM')
                 m = table_y7['MODEL'][s]
                 tp = table_y7['INSTALL_2'][s]
-                axs.flatten()[k].set_title(s + '-' + sl + '\n ' + m + ' ' + tp)
+                axs.flatten()[k].set_title(s + '-' + sl + '\n ' + m)
             axs.flatten()[k].legend()
             k = k + nnan
         fig.suptitle(ch)
         if savefigs:
-            fig.savefig(writename + '_' + ch + '_' + wherepeaks[i] + '_ts.png',bbox_inches='tight')
+            fig.savefig(writename + 'ts_' + ch + '_' + wherepeaks[i] + '.png',bbox_inches='tight')
 
 #%% get ratios--method B
 meanprops = {}
@@ -171,74 +172,82 @@ for p in ['peak','t2peak','fwhm']:
     col2 = np.matlib.repmat(sleds,1,len(channels)).flatten()
     mp = pd.DataFrame(index=models,columns=[col1,col2])
     for i, ch in enumerate(channels):
-        for m in models:
-            for s in sleds:
-                se = table_y7.query('MODEL==\''+m+'\' and SLED==\''+s+'\'').index
-                if len(se)==0:
-                    x = np.nan
-                else:
-                    x = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
-                mp.set_value(m,(ch,s),np.mean(x))
-        mp[ch] = mp[ch].divide(mp[ch]['new_accel'],axis='rows')
-        if plotfigs:
-            fig = plt.figure(figsize=(5,5))       
-            ax = plt.axes()
-            ax = plot_bar(ax,mp[ch])
-            ax.set_title(p + '-' + ch)
-            if savefigs:
-                fig.savefig(writename + p + '_' + ch + '_mean_' + wherepeaks[i] + '_bar.png', bbox_inches='tight')
-            plt.show()
-            plt.close(fig)
-        
-        log_meanprops = mp[ch].applymap(np.log)
-        if writefiles:
-            log_meanprops.to_csv(writename + p + '_log_meanprops_' + ch + '_' + wherepeaks[i] + '.csv')
-    meanprops[p] = mp
+        for tp in types:
+            for m in models:
+                for s in sleds:
+                    se = table_y7.query('MODEL==\''+m+'\' and SLED==\''+s+'\' and INSTALL_2==\'' + tp + '\'').index
+                    if len(se)==0:
+                        x = np.nan
+                    else:
+                        x = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
+                    mp.set_value(m,(ch,s),np.mean(x))
+            mp[ch] = mp[ch].divide(mp[ch]['new_accel'],axis='rows')
+            if plotfigs:
+                fig = plt.figure(figsize=(5,5))       
+                ax = plt.axes()
+                ax = plot_bar(ax,mp[ch])
+                ax.set_title(p + '-' + ch + ' ' + tp)
+                if savefigs:
+                    fig.savefig(writename + 'bar_' + ch + '_' + p + '_' + tp + '_' + wherepeaks[i] + '_bar.png', bbox_inches='tight')
+                plt.show()
+                plt.close(fig)
+            
+            log_meanprops = mp[ch].applymap(np.log)
+            if writefiles:
+                log_meanprops.to_csv(writename + 'log_meanprops_' + ch + '_' + p + '_' + tp + '_' + wherepeaks[i] + '.csv')
+                mp[ch].to_csv(writename + 'meanprops_' + ch + '_' + p + '_' + tp + '_' + wherepeaks[i] + '.csv')
+            display(mp[ch])
 
-#%% get ratios--method C
-#for p in ['peak','t2peak','fwhm']:
-#    meanprops = pd.DataFrame(index=models,columns=np.append(sleds,'mean_new_accel'))
-#    for m in models:
-#        for s in sleds:
-#            se = table_y7.query('MODEL==\''+m+'\' and SLED==\''+s+'\'').index
-#            if len(se)==0:
-#                x = np.nan
-#            else:
-#                x = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
-#            if s=='new_accel':
-#                meanprops.set_value(m,'mean_new_accel',np.mean(x))
-#            meanprops.set_value(m,s,x/meanprops['mean_new_accel'][m])
-#    barprops = {}
-#    for s in sleds:
-#        barprops[s] = np.concatenate(meanprops[s].dropna().get_values())
-#    fig = plt.figure(figsize=(5,5))
-#    ax = plt.axes()
-#    ax = plot_bar(ax,barprops)
-#    ax.set_title(p + '-' + ch)
-
-#%% get ratios--method A
-#for p in ['peak','t2peak','fwhm']:
-#    meanprops = pd.DataFrame(index=models,columns=sleds)
-#    for m in models:
-#        se = table_y7.query('MODEL==\''+m+'\' and SLED==\'new_accel\'').index
-#        x1 = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
-#        m_ = len(x1)
-#        meanprops.set_value(m,'new_accel',[1])
-#        for s in sleds:
-#            if s=='new_accel':
-#                continue
-#            se = table_y7.query('MODEL==\''+m+'\' and SLED==\''+s+'\'').index
-#            if len(se)==0:
-#                meanprops.set_value(m,s,[np.nan])
-#            else:
-#                x2 = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
-#                n_ = len(x2)
-#            div = (np.matlib.repmat(x2,m_,1)/np.matlib.repmat(x1,n_,1).T).flatten()
-#            meanprops.set_value(m,s,div)
-#    barprops = {}
-#    for s in sleds:
-#        barprops[s] = np.concatenate(meanprops[s].get_values())
-#    fig = plt.figure(figsize=(5,5))
-#    ax = plt.axes()
-#    ax = plot_bar(ax,barprops)
-#    ax.set_title(p + '-' + ch)
+#%% compare stds 
+for ch in channels:
+    for m in models:
+        for tp in types:
+            # find tests with the given model and installation
+            se_new = np.asarray(table_y7.query('MODEL==\'' + m + '\' and INSTALL_2==\'' + tp + '\' and SLED==\'new_accel\'').index)
+            se_old = np.asarray(table_y7.query('MODEL==\'' + m + '\' and INSTALL_2==\'' + tp + '\' and SLED==\'old_accel\'').index)
+            se_decel = np.asarray(table_y7.query('MODEL==\'' + m + '\' and INSTALL_2==\'' + tp + '\' and SLED==\'new_decel\'').index)
+            
+            se_new = se_new[[~np.isnan(chdata[ch][se_new][i]).all() for i in range(len(se_new))]]
+            se_old = se_old[[~np.isnan(chdata[ch][se_old][i]).all() for i in range(len(se_old))]]
+            se_decel = se_decel[[~np.isnan(chdata[ch][se_decel][i]).all() for i in range(len(se_decel))]]
+            # number of tests on new_accel > 1 
+            if len(se_new) == 0 or len(se_old)==0:
+                continue
+            
+            if len(se_new) > 1:
+                std_old = []
+                # get std in new_accel
+                std_new = np.std(chdata[ch][se_new].get_values())
+                if len(se_old)>1:
+                    std_old = np.std(chdata[ch][se_old].get_values())
+                std_tot = np.std(chdata[ch][np.concatenate((se_new,se_old))].get_values())
+                
+                fig, axs = plt.subplots(nrows=1,ncols=2,figsize=(10,4))
+                axs[0].plot(t,std_new,color=[cmap_r[0], cmap_g[0], cmap_b[0]],label='new_accel n=' + str(len(se_new)))
+                if len(se_old)>1:
+                    axs[0].plot(t,std_old,color=[cmap_r[2], cmap_g[2], cmap_b[2]],label='old_accel n=' + str(len(se_old)))
+                axs[0].plot(t,std_tot,color='k',label='combined n=' + str(len(se_new)+len(se_old)))
+                axs[0].legend()
+                axs[0].set_title(ch + ' ' + m + ' ' + tp)
+                
+                for s in se_new:
+                    axs[1].plot(t,chdata[ch][s],color=[cmap_r[0], cmap_g[0], cmap_b[0]],label='new_accel ' + s)
+                for s in se_old:
+                    axs[1].plot(t,chdata[ch][s],color=[cmap_r[2], cmap_g[2], cmap_b[2]],label='old_accel ' + s)
+                axs[1].legend()
+                plt.show()
+                if savefigs:
+                    fig.savefig(writename + 'std_' + ch + '_' + tp + '_' + m + '.png',bbox_inches='tight')
+                plt.close(fig)
+            else:
+                for s in se_new:
+                    plt.plot(t,chdata[ch][s],color=[cmap_r[0], cmap_g[0], cmap_b[0]],label='new_accel ' + s)
+                for s in se_old:
+                    plt.plot(t,chdata[ch][s],color=[cmap_r[2], cmap_g[2], cmap_b[2]],label='old_accel ' + s)
+                plt.legend()
+                plt.title(ch + ' ' + m + ' ' + tp)
+                if savefigs:
+                    plt.savefig(writename + 'overlay_' + ch + '_' + tp + '_' + m + '.png',bbox_inches='tight')
+                plt.show()
+                
+            
