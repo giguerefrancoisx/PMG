@@ -46,7 +46,7 @@ def import_data(directory, channels, tcns=None, sl=slice(None), check=True, stag
         raw = fulldata[channel][sl]
 
         if tcns is not None:
-            raw = raw.loc[:,tcns].dropna(axis=1)
+            raw = raw.loc[:,tcns].dropna(how='all', axis=1)
         if check:
             clean[channel] = check_and_clean(raw, stage)
         else:

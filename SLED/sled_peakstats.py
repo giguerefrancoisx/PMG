@@ -16,17 +16,12 @@ from scipy.stats import cumfreq
 from PMG.read_data import read_merged
 from PMG.COM import table as tb
 
-dummy = 'Y6'
+dummy = 'Y2'
 plotfigs = 1
-savefigs = 1
-writefiles = 1
+savefigs = 0
+writefiles = 0
 usesmth = 0
-exclude = ['SE16-0395',
-           'SE16-0399',
-           'SE16-0402',
-           'SE16-1012_2',
-           'SE17-1015_2',
-           'SE17-1025_2']
+
 #%%
 table = tb.get('SLED')
 directory = 'P:\\SLED\\Data\\'
@@ -38,7 +33,7 @@ if dummy=='Y7':
                 '12HEAD0000Y7ACXA',
                 '12CHST0000Y7ACXC']
     wherepeaks = np.array(['-tive','+tive','+tive','+tive','-tive','-tive'])
-
+    exclude = []
 #    channels = ['12PELV0000Y7ACXA']
 #    wherepeaks = np.array(['-tive'])
 elif dummy=='Y2':
@@ -49,14 +44,25 @@ elif dummy=='Y2':
                 '12CHST0000Y2ACXC',
                 '12PELV0000Y2ACXA']
     wherepeaks = np.array(['+tive','+tive','+tive','+tive','+tive','+tive'])
+    exclude = ['SE16-1012_2',
+               'SE16-1014_2',
+               'SE17-1015_2',
+               'SE17-1016_2',
+               'SE16-0399',
+               'SE16-0402',
+               'SE16-0395',
+               'SE16-0403',
+               'SE17-1025_2',
+               'SE17-1026_2']
 cutoff = range(100,1600)
 
-table_y7 = table.query('DUMMY==\'' + dummy + '\'').filter(items=['SE','MODEL','SLED'])
+table_y7 = table.query('DUMMY==\'' + dummy + '\'').filter(items=['SE','MODEL','INSTALL_2','SLED'])
 table_y7 = table_y7.set_index('SE',drop=True)
 if not(exclude==[]):
     table_y7 = table_y7.drop(exclude,axis=0)
 models = np.unique(table_y7['MODEL'])
 sleds = np.unique(table_y7['SLED'])
+types = table_y7['INSTALL_2'].dropna().unique()
 
 t, fulldata = import_data(directory,channels,tcns=table_y7.index)
 chdata = arrange.test_ch_from_chdict(fulldata,cutoff)
@@ -86,27 +92,30 @@ else:
 if plotfigs:
     # compare across sleds for each model
     for m in models:
-        for p in ['peak','t2peak', 'fwhm']:
-            for i,ch in enumerate(channels):
-                fig = plt.figure(figsize=(5,5))
-                ax = plt.axes()
-                x = {}
-                for s in sleds:
-                    se = table_y7.query('MODEL==\''+m+'\' and SLED==\''+s+'\'').index
-                    if len(se)==0:
-                        x[s] = [np.nan]
-                    else:
-                        xs = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
-                        if len(xs)>0:
-                            x[s] = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
-                        else:
+        for tp in types:
+            for p in ['peak','t2peak', 'fwhm']:
+                for i,ch in enumerate(channels):
+                    x = {}
+                    for s in sleds:
+                        se = table_y7.query('MODEL==\''+m+'\' and SLED==\''+s+'\' and INSTALL_2==\'' + tp + '\'').index
+                        if len(se)==0:
                             x[s] = [np.nan]
-                ax = plot_cat_nobar(ax,x)
-                ax.set_title(p + '-' + ch + '\n ' + m)
-                if savefigs:
-                    fig.savefig(writename + p + '_' + ch + '_' + m + '_' + wherepeaks[i] + '_dot.png', bbox_inches='tight')
-                plt.show()
-                plt.close(fig) 
+                        else:
+                            xs = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
+                            if len(xs)>0:
+                                x[s] = np.abs(arrange.get_values(props[p][ch][wherepeaks[i]][se].get_values().astype(float)))
+                            else:
+                                x[s] = [np.nan]
+                    if np.isnan(x['new_accel']).all() and np.isnan(x['new_decel']).all() and np.isnan(x['old_accel']).all():
+                        continue
+                    fig = plt.figure(figsize=(5,5))
+                    ax = plt.axes()
+                    ax = plot_cat_nobar(ax,x)
+                    ax.set_title(p + '-' + ch + '\n ' + m + ' ' + t)
+                    if savefigs:
+                        fig.savefig(writename + 'dot_' + ch + '_' + p + '_' + t + '_' + m + '_' + wherepeaks[i] + '.png', bbox_inches='tight')
+                    plt.show()
+                    plt.close(fig) 
 
 #%% plot curves and characteristics on curve
 cmap_r = np.linspace(252,63,num=len(sleds))/255
@@ -116,7 +125,7 @@ if plotfigs:
     for i, ch in enumerate(channels):
         n = int(np.ceil(np.sum(table_y7['SLED']=='new_accel')/10)) + int(np.ceil(np.sum(table_y7['SLED']=='new_decel')/10)) + int(np.ceil(np.sum(table_y7['SLED']=='old_accel')/10))
             
-        fig, axs = plt.subplots(n,10,sharey='all',figsize=(40,4*(n))) 
+        fig, axs = plt.subplots(n,10,sharey='all',figsize=(40,5*(n))) 
         k = -1
         for j, sl in enumerate(sleds):
             se = table_y7.query('SLED==\'' + sl + '\'').index
@@ -146,7 +155,9 @@ if plotfigs:
                 axs.flatten()[k].plot(t[ipeak],raw[ipeak],'.',color="r",markersize=10,label='peak')
 #                axs.flatten()[k].plot(t[i2peak],raw[i2peak],'.',color='b',markersize=10,label='t2peak')
                 axs.flatten()[k].plot(fwhm_t,fwhm_x,color='k',label='FWHM')
-                axs.flatten()[k].set_title(s + '-' + sl)
+                m = table_y7['MODEL'][s]
+                tp = table_y7['INSTALL_2'][s]
+                axs.flatten()[k].set_title(s + '-' + sl + '\n ' + m + ' ' + tp)
             axs.flatten()[k].legend()
             k = k + nnan
         fig.suptitle(ch)
