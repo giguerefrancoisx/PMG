@@ -30,7 +30,8 @@ if dummy=='Y2':
                'SE17-1025_2',
                'SE17-1026_2']
 else:
-    channels = ['Head 3ms','Chest 3ms','Head Excursion','Knee Excursion']
+#    channels = ['Head 3ms','Chest 3ms','Head Excursion','Knee Excursion']
+    channels = ['Seat Excursion','Seat-Head']
     exclude = []
 
 table = tb.get('SLED')

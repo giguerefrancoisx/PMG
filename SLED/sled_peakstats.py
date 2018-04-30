@@ -5,15 +5,11 @@ Created on Thu Apr  5 15:13:09 2018
 @author: tangk
 """
 
-from PMG.COM.openbook import openHDF5
 from PMG.COM import arrange
 from PMG.COM.get_props import *
 from PMG.COM.plotfuns import *
 from PMG.COM.data import import_data
 import pandas as pd
-from scipy.stats import anderson_ksamp
-from scipy.stats import cumfreq
-from PMG.read_data import read_merged
 from PMG.COM import table as tb
 
 dummy = 'Y7'
@@ -31,8 +27,9 @@ if dummy=='Y7':
                 '12CHST0000Y7ACRC',
                 '12PELV0000Y7ACRA',
                 '12HEAD0000Y7ACXA',
-                '12CHST0000Y7ACXC']
-    wherepeaks = np.array(['-tive','+tive','+tive','+tive','-tive','-tive'])
+                '12CHST0000Y7ACXC',
+                '12NECKUP00Y7FOZA']
+    wherepeaks = np.array(['-tive','+tive','+tive','+tive','-tive','-tive','+tive'])
     exclude = ['SE16-0204']
 #    channels = ['12PELV0000Y7ACXA']
 #    wherepeaks = np.array(['-tive'])
@@ -167,7 +164,7 @@ if plotfigs:
 
 #%% get ratios--method B
 meanprops = {}
-for p in ['peak','t2peak','fwhm']:
+for p in ['peak']:#,'t2peak','fwhm']:
     col1 = np.matlib.repmat(np.asarray(channels).reshape(-1,1),1,3).flatten()
     col2 = np.matlib.repmat(sleds,1,len(channels)).flatten()
     mp = pd.DataFrame(index=models,columns=[col1,col2])
