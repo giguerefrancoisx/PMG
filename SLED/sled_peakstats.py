@@ -13,11 +13,12 @@ import pandas as pd
 from PMG.COM import table as tb
 
 dummy = 'Y7'
-plotfigs = 1
-savefigs = 1
-writefiles = 1
+plotfigs = 0
+savefigs = 0
+writefiles = 0
 usesmth = 0
-
+install = 'INSTALL_2'
+model = 'MODEL_2'
 #%%
 table = tb.get('SLED')
 directory = 'P:\\SLED\\Data\\'
@@ -27,9 +28,8 @@ if dummy=='Y7':
                 '12CHST0000Y7ACRC',
                 '12PELV0000Y7ACRA',
                 '12HEAD0000Y7ACXA',
-                '12CHST0000Y7ACXC',
-                '12NECKUP00Y7FOZA']
-    wherepeaks = np.array(['-tive','+tive','+tive','+tive','-tive','-tive','+tive'])
+                '12CHST0000Y7ACXC']
+    wherepeaks = np.array(['-tive','+tive','+tive','+tive','-tive','-tive'])
     exclude = ['SE16-0204']
 #    channels = ['12PELV0000Y7ACXA']
 #    wherepeaks = np.array(['-tive'])
@@ -53,13 +53,13 @@ elif dummy=='Y2':
                'SE17-1026_2']
 cutoff = range(100,1600)
 
-table_y7 = table.query('DUMMY==\'' + dummy + '\'').filter(items=['SE','MODEL','INSTALL_2','SLED'])
+table_y7 = table.query('DUMMY==\'' + dummy + '\'').filter(items=['SE'] + [model] + [install] + ['SLED'])
 table_y7 = table_y7.set_index('SE',drop=True)
 if not(exclude==[]):
     table_y7 = table_y7.drop(exclude,axis=0)
-models = np.unique(table_y7['MODEL'])
+models = np.unique(table_y7[model])
 sleds = np.unique(table_y7['SLED'])
-types = table_y7['INSTALL_2'].dropna().unique()
+types = table_y7[install].dropna().unique()
 
 t, fulldata = import_data(directory,channels,tcns=table_y7.index)
 chdata = arrange.test_ch_from_chdict(fulldata,cutoff)
@@ -98,7 +98,7 @@ if plotfigs:
                 for i,ch in enumerate(channels):
                     x = {}
                     for s in sleds:
-                        se = table_y7.query('MODEL==\''+m+'\' and SLED==\''+s+'\' and INSTALL_2==\'' + tp + '\'').index
+                        se = table_y7.query(model + '==\''+m+'\' and SLED==\''+s+'\' and ' + install + '==\'' + tp + '\'').index
                         if len(se)==0:
                             x[s] = [np.nan]
                         else:
@@ -153,8 +153,8 @@ if plotfigs:
                 axs.flatten()[k].plot(t[ipeak],raw[ipeak],'.',color="r",markersize=10,label='peak')
                 axs.flatten()[k].plot(t[i2peak],raw[i2peak],'*',color='b',markersize=10,label='t2peak')
                 axs.flatten()[k].plot(fwhm_t,fwhm_x,color='k',label='FWHM')
-                m = table_y7['MODEL'][s]
-                tp = table_y7['INSTALL_2'][s]
+                m = table_y7[model][s]
+                tp = table_y7[install][s]
                 axs.flatten()[k].set_title(s + '-' + sl + '\n ' + m)
             axs.flatten()[k].legend()
             k = k + nnan
@@ -164,7 +164,7 @@ if plotfigs:
 
 #%% get ratios--method B
 meanprops = {}
-for p in ['peak']:#,'t2peak','fwhm']:
+for p in ['peak','t2peak','fwhm']:
     col1 = np.matlib.repmat(np.asarray(channels).reshape(-1,1),1,3).flatten()
     col2 = np.matlib.repmat(sleds,1,len(channels)).flatten()
     mp = pd.DataFrame(index=models,columns=[col1,col2])
@@ -172,7 +172,7 @@ for p in ['peak']:#,'t2peak','fwhm']:
         for tp in types:
             for m in models:
                 for s in sleds:
-                    se = table_y7.query('MODEL==\''+m+'\' and SLED==\''+s+'\' and INSTALL_2==\'' + tp + '\'').index
+                    se = table_y7.query(model + '==\''+m+'\' and SLED==\''+s+'\' and ' + install + '==\'' + tp + '\'').index
                     if len(se)==0:
                         x = np.nan
                     else:
@@ -193,16 +193,19 @@ for p in ['peak']:#,'t2peak','fwhm']:
             if writefiles:
                 log_meanprops.to_csv(writename + 'log_meanprops_' + ch + '_' + p + '_' + tp + '_' + wherepeaks[i] + '.csv')
                 mp[ch].to_csv(writename + 'meanprops_' + ch + '_' + p + '_' + tp + '_' + wherepeaks[i] + '.csv')
-            display(mp[ch])
+#            display(mp[ch])
+            display(p + ' ' + ch + ' ' + tp + ':')
+            display('mean: ' + str(np.nanmean(mp[ch]['old_accel'].astype(float))))
+            display('std: ' + str(np.nanstd(mp[ch]['old_accel'].astype(float))))
 
 #%% compare stds 
-for ch in channels:
+for j, ch in enumerate(channels):
     for m in models:
         for tp in types:
             # find tests with the given model and installation
-            se_new = np.asarray(table_y7.query('MODEL==\'' + m + '\' and INSTALL_2==\'' + tp + '\' and SLED==\'new_accel\'').index)
-            se_old = np.asarray(table_y7.query('MODEL==\'' + m + '\' and INSTALL_2==\'' + tp + '\' and SLED==\'old_accel\'').index)
-            se_decel = np.asarray(table_y7.query('MODEL==\'' + m + '\' and INSTALL_2==\'' + tp + '\' and SLED==\'new_decel\'').index)
+            se_new = np.asarray(table_y7.query(model + '==\'' + m + '\' and ' + install + '==\'' + tp + '\' and SLED==\'new_accel\'').index)
+            se_old = np.asarray(table_y7.query(model + '==\'' + m + '\' and ' + install + '==\'' + tp + '\' and SLED==\'old_accel\'').index)
+            se_decel = np.asarray(table_y7.query(model + '==\'' + m + '\' and ' + install + '==\'' + tp + '\' and SLED==\'new_decel\'').index)
             
             se_new = se_new[[~np.isnan(chdata[ch][se_new][i]).all() for i in range(len(se_new))]]
             se_old = se_old[[~np.isnan(chdata[ch][se_old][i]).all() for i in range(len(se_old))]]
@@ -211,40 +214,18 @@ for ch in channels:
             if len(se_new) == 0 or len(se_old)==0:
                 continue
             
-            if len(se_new) > 1:
-                std_old = []
-                # get std in new_accel
-                std_new = np.std(chdata[ch][se_new].get_values())
-                if len(se_old)>1:
-                    std_old = np.std(chdata[ch][se_old].get_values())
-                std_tot = np.std(chdata[ch][np.concatenate((se_new,se_old))].get_values())
-                
-                fig, axs = plt.subplots(nrows=1,ncols=2,figsize=(10,4))
-                axs[0].plot(t,std_new,color=[cmap_r[0], cmap_g[0], cmap_b[0]],label='new_accel n=' + str(len(se_new)))
-                if len(se_old)>1:
-                    axs[0].plot(t,std_old,color=[cmap_r[2], cmap_g[2], cmap_b[2]],label='old_accel n=' + str(len(se_old)))
-                axs[0].plot(t,std_tot,color='k',label='combined n=' + str(len(se_new)+len(se_old)))
-                axs[0].legend()
-                axs[0].set_title(ch + ' ' + m + ' ' + tp)
-                
-                for s in se_new:
-                    axs[1].plot(t,chdata[ch][s],color=[cmap_r[0], cmap_g[0], cmap_b[0]],label='new_accel ' + s)
-                for s in se_old:
-                    axs[1].plot(t,chdata[ch][s],color=[cmap_r[2], cmap_g[2], cmap_b[2]],label='old_accel ' + s)
-                axs[1].legend()
-                plt.show()
-                if savefigs:
-                    fig.savefig(writename + 'std_' + ch + '_' + tp + '_' + m + '.png',bbox_inches='tight')
-                plt.close(fig)
-            else:
-                for s in se_new:
-                    plt.plot(t,chdata[ch][s],color=[cmap_r[0], cmap_g[0], cmap_b[0]],label='new_accel ' + s)
-                for s in se_old:
-                    plt.plot(t,chdata[ch][s],color=[cmap_r[2], cmap_g[2], cmap_b[2]],label='old_accel ' + s)
-                plt.legend()
-                plt.title(ch + ' ' + m + ' ' + tp)
-                if savefigs:
-                    plt.savefig(writename + 'overlay_' + ch + '_' + tp + '_' + m + '.png',bbox_inches='tight')
-                plt.show()
+            for s in se_new:
+                plt.plot(t,chdata[ch][s],color=[cmap_r[0], cmap_g[0], cmap_b[0]],label='new_accel ' + s)
+#                plt.plot(t[props['ipeak'][ch][wherepeaks[j]][s]],props['peak'][ch][wherepeaks[j]][s],'.',color='r',markersize=10)
+#                plt.plot(props['t2peak'][ch][wherepeaks[j]][s],chdata[ch][s][props['i2peak'][ch][wherepeaks[j]][s]],'*',color='b',markersize=10)
+            for s in se_old:
+                plt.plot(t,chdata[ch][s],color=[cmap_r[2], cmap_g[2], cmap_b[2]],label='old_accel ' + s)
+#                plt.plot(t[props['ipeak'][ch][wherepeaks[j]][s]],props['peak'][ch][wherepeaks[j]][s],'.',color='r',markersize=10)
+#                plt.plot(props['t2peak'][ch][wherepeaks[j]][s],chdata[ch][s][props['i2peak'][ch][wherepeaks[j]][s]],'*',color='b',markersize=10)
+            plt.legend()
+            plt.title(ch + ' ' + m + ' ' + tp)
+            if savefigs:
+                plt.savefig(writename + 'overlay_' + ch + '_' + tp + '_' + m + '.png',bbox_inches='tight')
+            plt.show()
                 
             

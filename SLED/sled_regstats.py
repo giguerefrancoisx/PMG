@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from PMG.COM import table as tb
 from PMG.COM.plotfuns import *
 
-dummy = 'Y7'
+dummy = 'Y2'
 plotfigs = 1
 savefigs = 1
 writefiles = 1
@@ -30,8 +30,7 @@ if dummy=='Y2':
                'SE17-1025_2',
                'SE17-1026_2']
 else:
-#    channels = ['Head 3ms','Chest 3ms','Head Excursion','Knee Excursion']
-    channels = ['Seat Excursion','Seat-Head']
+    channels = ['Head 3ms','Chest 3ms','Head Excursion','Knee Excursion','Seat Excursion','Seat-Head']
     exclude = []
 
 table = tb.get('SLED')
@@ -104,3 +103,6 @@ for i, ch in enumerate(channels):
             log_meanprops.to_csv(writename + 'log_meanprops_' + ch + '_' + t + '.csv')
             mp[ch].to_csv(writename + 'meanprops_' + ch + '_' + t + '.csv')
         display(mp[ch])
+        display(ch + ' ' + t + ':')
+        display(np.nanmean(mp[ch]['old_accel'].astype(float)))
+        display(np.nanstd(mp[ch]['old_accel'].astype(float)))
