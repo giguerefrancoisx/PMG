@@ -199,8 +199,10 @@ for p in ['peak','t2peak','fwhm']:
             display('std: ' + str(np.nanstd(mp[ch]['old_accel'].astype(float))))
 
 #%% compare stds 
-for j, ch in enumerate(channels):
-    for m in models:
+#for j, ch in enumerate(channels[0:1]):
+#    for m in models:
+for m in models[0:9]:
+    for j, ch in enumerate(channels):
         for tp in types:
             # find tests with the given model and installation
             se_new = np.asarray(table_y7.query(model + '==\'' + m + '\' and ' + install + '==\'' + tp + '\' and SLED==\'new_accel\'').index)
