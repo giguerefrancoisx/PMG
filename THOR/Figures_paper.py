@@ -13,10 +13,12 @@ import PMG.COM.table as tb
 import PMG.COM.plotstyle as style
 THOR = 'P:/AHEC/Data/THOR/'
 chlist = []
-chlist.extend(['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11FEMRLE00THFOZB','11CHSTRILOTHDSXB'])
+chlist.extend(['11NECKLO00THFOXA','11NECKLO00THFOYA','11FEMRLE00THFOZB'])
+chlist.extend(['11CHSTLEUPTHDSXB','11CHSTRIUPTHDSXB','11CHSTLELOTHDSXB','11CHSTRILOTHDSXB'])
 chlist.extend(['11HEAD0000THACXA','11SPIN0100THACXC', '11CHST0000THACXC', '11SPIN1200THACXC', '11PELV0000THACXA'])
 chlist.extend(['11HEAD0000THACYA','11SPIN0100THACYC', '11CHST0000THACYC', '11SPIN1200THACYC', '11PELV0000THACYA'])
 chlist.extend(['11SPIN0100THACYC','11THSP0100THAVXA','11THSP0100THAVZA'])
+chlist = list(set(chlist))
 time, fulldata = dat.import_data(THOR, chlist, check=False)
 table = tb.get('THOR')
 #table = table[table.TYPE.isin(['Frontale/Véhicule'])]
@@ -89,7 +91,7 @@ colors_chst = style.colordict(fulldata['11CHSTLEUPTHDSXB'].loc[:,slips+oks], 'mi
 #    axs[-1].legend(loc='lower right', fontsize=6)
 #
 #    plt.tight_layout()
-#%% Like above but 2x2 grid
+#%% FIGURE 6 - Like above but 2x2 grid
 slips = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48]) & table.CBL_BELT.isin(['SLIP'])].CIBLE.tolist()
 oks = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48]) & table.CBL_BELT.isin(['OK'])].CIBLE.tolist()
 
@@ -100,14 +102,16 @@ xfmt.set_powerlimits((-3,4))
 
 if 1:
     plt.close('all')
-    chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11CHSTRILOTHDSXB']
+    chlist = ['11NECKLO00THFOXA','11NECKLO00THFOYA','11CHSTLEUPTHDSXB','11CHSTRIUPTHDSXB','11CHSTLELOTHDSXB','11CHSTRILOTHDSXB']
     labels = ['Lower Neck $\mathregular{F_x}$ [N]',
               'Lower Neck $\mathregular{F_y}$ [N]',
               'Upper Left Chest $\mathregular{D_x}$ [mm]',
+              'Upper Right Chest $\mathregular{D_x}$ [mm]',
+              'Lower Left Chest $\mathregular{D_x}$ [mm]',
               'Lower Right Chest $\mathregular{D_x}$ [mm]']
     ylabel = dict(zip(chlist, labels))
 
-    fig, axs = style.subplots(2, 2, sharex=[1,1,1,1], sharey=[1,2,3,3], figsize=(7,4.5))
+    fig, axs = style.subplots(3, 2, sharex='all', sharey=[1,2,3,3,3,3], figsize=(7,6.5))
 
     for i, channel in enumerate(chlist):
         df = fulldata[channel].dropna(axis=1)
@@ -129,12 +133,22 @@ if 1:
 
         axs[i].set_ylabel(ylabel[channel])
         axs[i].yaxis.set_label_coords(-0.28,0.5)
-        lim = np.hstack((ok_low,slip_low)).min(), np.hstack((ok_high,slip_high)).max()
-        style.custom_locator(axs[i], lim, 6)
+#        lim = np.hstack((ok_low,slip_low)).min(), np.hstack((ok_high,slip_high)).max()
+#        style.set_locator(axs[i], set_x=False, nbins=7)#, lim, 6)
+#        style.viewlim_on_ticks(axs[i], set_x=True)
         axs[i].yaxis.set_major_formatter(xfmt)
-        axs[i].text(0.04,0.94,'ABCD'[i], horizontalalignment='left',
+        axs[i].text(0.04,0.94,'ABCDEF'[i], horizontalalignment='left',
            verticalalignment='top',transform=axs[i].transAxes, fontsize=12)
 
+        if i==0:
+            axs[i].set_ylim(-1500,2250)
+            axs[i].set_yticks(np.linspace(-1500,2250,6))
+        if i==1:
+            axs[i].set_ylim(-2000,500)
+            axs[i].set_yticks(np.linspace(-2000,500,6))
+        if i in [2,3,4,5]:
+            axs[i].set_ylim(-55,15)
+            axs[i].set_yticks(np.linspace(-55,15,8))
 
     axs[-1].set_xlim(0,0.2)
     axs[-1].set_xlabel('Time [s]')
@@ -602,7 +616,7 @@ if 1:
 ##plt.scatter(SB_table['T2'][notnull]-SB_table['T1'][notnull],SB_table['NECK'][notnull],marker='.',c=SB_table['COLOR'][notnull])
 ##plt.gca().set_xlabel('T2-T1 [s]')
 ##plt.gca().set_ylabel('Neck X Force [N]')
-#%% FIGURE - Belt fraction grid
+#%% FIGURE 7 - Belt fraction grid
 columns = ['CIBLE','CBL_BELT','T1','T2','FRACTION']
 table = tb.get('THOR')
 table = table[table.TYPE.isin(['Frontale/Véhicule']) & table.VITESSE.isin([48])]
@@ -619,8 +633,12 @@ if 1:
     fig, axs = style.subplots(2,2, sharex=[1,1,1,4], sharey=[1,2,3,3], figsize=(7, 4.5))
 
     ax = axs[0]
-    style.hist(ax, SB_table[SB_table.CBL_BELT.isin(['OK'])]['FRACTION'], bins=np.linspace(0.5,1,10), color=ok_color, label='No-Slip', alpha=0.5)
-    style.hist(ax, SB_table[SB_table.CBL_BELT.isin(['SLIP'])]['FRACTION'], bins=np.linspace(0.5,1,10), color=slip_color, label='Slip', alpha=0.5)
+#    style.hist(ax, SB_table[SB_table.CBL_BELT.isin(['OK'])]['FRACTION'], bins=np.linspace(0.5,1,10), color=ok_color, label='No-Slip', alpha=0.5)
+#    style.hist(ax, SB_table[SB_table.CBL_BELT.isin(['SLIP'])]['FRACTION'], bins=np.linspace(0.5,1,10), color=slip_color, label='Slip', alpha=0.5)
+    x=SB_table[SB_table.CBL_BELT.isin(['OK'])]['FRACTION']
+    y=SB_table[SB_table.CBL_BELT.isin(['SLIP'])]['FRACTION']
+    bins = np.linspace(0.5,1,10)
+    ax.hist([x,y], bins, normed=True, label=['No-Slip','Slip'], color=[ok_color,slip_color], alpha=0.7)
     ax.set_xlabel('Belt Position Relative to Neck')
     ax.set_ylabel('Frequency')
     ax.yaxis.set_label_coords(-0.26,0.5)
