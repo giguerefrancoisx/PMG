@@ -13,49 +13,49 @@ from smooth import smooth_peaks
 # input
 dir1 = 'P:\\AHEC\\Data\\THOR\\'
 
-## 48 vehicle to vehicle
-## OK
-#files1 = ['TC14-015',
-#          'TC15-024',
-#          'TC16-019',
-#          'TC16-205',
-#          'TC17-017',
-#          'TC17-025',
-#          'TC17-028',
-#          'TC17-029',
-#          'TC17-033',
-#          'TC17-206',
-#          'TC17-208',
-#          'TC17-211']
-## slip
-#files2 = ['TC08-107',
-#          'TC09-027',
-#          'TC11-008',
-#          'TC12-003',
-#          'TC13-007',
-#          'TC13-035',
-#          'TC13-036',
-#          'TC13-119',
-#          'TC14-035',
-#          'TC14-141',
-#          'TC14-174',
-#          'TC14-502',
-#          'TC15-155',
-#          'TC15-162',
-#          'TC15-163',
-#          'TC16-016',
-#          'TC16-125',
-#          'TC17-012',
-#          'TC17-030',
-#          'TC17-031',
-#          'TC17-034',
-#          'TC17-201',
-#          'TC17-203',
-#          'TC17-209',
-#          'TC17-210',
-#          'TC17-212',
-#          'TC17-505']
-#writename = 'THOR_48_veh2veh_'
+# 48 vehicle to vehicle
+# OK
+files1 = ['TC14-015',
+          'TC15-024',
+          'TC16-019',
+          'TC16-205',
+          'TC17-017',
+          'TC17-025',
+          'TC17-028',
+          'TC17-029',
+          'TC17-033',
+          'TC17-206',
+          'TC17-208',
+          'TC17-211']
+# slip
+files2 = ['TC08-107',
+          'TC09-027',
+          'TC11-008',
+          'TC12-003',
+          'TC13-007',
+          'TC13-035',
+          'TC13-036',
+          'TC13-119',
+          'TC14-035',
+          'TC14-141',
+          'TC14-174',
+          'TC14-502',
+          'TC15-155',
+          'TC15-162',
+          'TC15-163',
+          'TC16-016',
+          'TC16-125',
+          'TC17-012',
+          'TC17-030',
+          'TC17-031',
+          'TC17-034',
+          'TC17-201',
+          'TC17-203',
+          'TC17-209',
+          'TC17-210',
+          'TC17-212',
+          'TC17-505']
+writename = 'THOR_48_veh2veh_'
 
 ## full sample vehicle to vehicle
 # OK
@@ -132,19 +132,19 @@ dir1 = 'P:\\AHEC\\Data\\THOR\\'
 #writename = 'THOR_Full_Sample_barrier_'
 
 # 48 barrier
-files1 = ['TC12-217',
-          'TC14-016',
-          'TC14-139',
-          'TC14-175',
-          'TC14-180',
-          'TC14-221',
-          'TC14-233',
-          'TC14-241',
-          'TC16-129',
-          'TC17-204',
-          'TC17-205',]
-files2 = ['TC12-004']
-writename = 'THOR_48_barrier_'
+#files1 = ['TC12-217',
+#          'TC14-016',
+#          'TC14-139',
+#          'TC14-175',
+#          'TC14-180',
+#          'TC14-221',
+#          'TC14-233',
+#          'TC14-241',
+#          'TC16-129',
+#          'TC17-204',
+#          'TC17-205',]
+#files2 = ['TC12-004']
+#writename = 'THOR_48_barrier_'
 
 #channels = ['11HEAD0000THACXA',
 #          '11SPIN0100THACXC',
@@ -155,20 +155,27 @@ writename = 'THOR_48_barrier_'
 #cutoff = range(100,1600)
 
 # head y, spine t1 y, chest y, spine t12 y, pelvis y, thsp avx, thsp avz
-channels = ['11CHSTLEUPTHDSXB',
-          '11CHSTRILOTHDSXB',
-          '11NECKLO00THFOXA',
-          '11NECKLO00THFOYA',
-          '11FEMRLE00THFOZB',
-          '11SPIN0100THACXC',
-          '11SPIN0100THACYC',
-          '11CHST0000THACXC',
-          '11CHST0000THACYC',
-          '11SPIN1200THACYC',
-          '11PELV0000THACYA',
-          '11THSP0100THAVXA',
-          '11THSP0100THAVZA']
-wherepeaks = np.array(['-tive','-tive','+tive','-tive','-tive','-tive','+tive','-tive','+tive','+tive','+tive','-tive','+tive'])
+#channels = ['11CHSTLEUPTHDSXB',
+#          '11CHSTRILOTHDSXB',
+#          '11NECKLO00THFOXA',
+#          '11NECKLO00THFOYA',
+#          '11FEMRLE00THFOZB',
+#          '11SPIN0100THACXC',
+#          '11SPIN0100THACYC',
+#          '11CHST0000THACXC',
+#          '11CHST0000THACYC',
+#          '11SPIN1200THACYC',
+#          '11PELV0000THACYA',
+#          '11THSP0100THAVXA',
+#          '11THSP0100THAVZA']
+#wherepeaks = np.array(['-tive','-tive','+tive','-tive','-tive','-tive','+tive','-tive','+tive','+tive','+tive','-tive','+tive'])
+#cutoff = range(100,1600)
+
+channels = ['11CHSTLEUPTHDSRB',
+            '11CHSTRIUPTHDSRB',
+            '11CHSTLELOTHDSRB',
+            '11CHSTRILOTHDSRB']
+wherepeaks = np.array(['+tive','+tive','+tive','+tive'])
 cutoff = range(100,1600)
 
 #channels = ['11CLAVLEINTHFOXA','11CLAVLEOUTHFOXA']
@@ -213,6 +220,7 @@ props1.update({'i2peak':arrange.arrange_by_peak(props1['smth'].applymap(get_i2pe
 #props1.update({'i2peak':arrange.arrange_by_peak(props1['smth'].applymap(get_ipeak)),
                'stats':pd.DataFrame(index=['peak','t2peak','BSp_peak','BSp_t2peak'],columns=props1['peak'].columns)})
 props1['t2peak'] = get_t2peak(t,props1['i2peak']).append(pd.DataFrame(index=['cdf']))
+#props1['PC_metrics'] = get_PC_metrics(chdata_1)
 props2 = {'peak':arrange.arrange_by_peak(chdata_2.applymap(peakval)).append(pd.DataFrame(index=['cdf'])),
           'ipeak':arrange.arrange_by_peak(chdata_2.applymap(get_ipeak)),
           'smth':chdata_2.applymap(smooth_data)}
@@ -221,7 +229,7 @@ props2.update({'i2peak':arrange.arrange_by_peak(props2['smth'].applymap(get_i2pe
 #props2.update({'i2peak':arrange.arrange_by_peak(props2['smth'].applymap(get_ipeak)),
                'stats':pd.DataFrame(index=['peak','t2peak','BSp_peak','BSp_t2peak'],columns=props2['peak'].columns)})
 props2['t2peak'] = get_t2peak(t,props2['i2peak']).append(pd.DataFrame(index=['cdf']))
-
+#props2['PC_metrics'] = get_PC_metrics(chdata_2)
 # multiple channels
 multiprops1 = {'Dt2peak':get_Dt2peak(props1)}
 multiprops1['stats'] = pd.DataFrame(index=pd.MultiIndex.from_product([channels,['Dt2peak','BSp_Dt2peak']]),columns=multiprops1['Dt2peak'].columns)

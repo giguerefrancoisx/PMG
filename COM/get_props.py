@@ -82,6 +82,26 @@ def get_Dt2peak(data):
                     out.set_value((ch2,f),(ch1,sign),t1-t2)
     return out
 
+def get_Dpeak(data):
+    # data is a props
+    channels = list(zip(*list(data['peak'])[0::2]))[0]
+    files = data['peak'].index[:-1]
+    cols = data['peak'].columns
+    rows = pd.MultiIndex.from_product([channels,list(files)+['cdf']])
+    out = pd.DataFrame(index=rows,columns=cols)
+
+    for i in range(len(channels)):
+        for j in range(i+1,len(channels)):
+            for f in files:
+                for sign in ['-tive','+tive']:
+                    ch1 = channels[i]
+                    ch2 = channels[j]
+                    t1 = data['peak'][ch1][sign][f]
+                    t2 = data['peak'][ch2][sign][f]
+                    out.set_value((ch2,f),(ch1,sign),t1-t2)
+    return out
+
+
 def get_fwhm(t,dataframe):
     out = pd.DataFrame(index=dataframe.index,columns=dataframe.columns)
     for col in dataframe.columns:
@@ -136,6 +156,27 @@ def get_tfwhm(t,dataframe):
 
 def get_mean(data):
     return np.mean(data)
+
+def get_PC_metrics(data):
+    # get metrics for PCA
+    # defined in: https://www.sciencedirect.com/science/article/pii/S0001457517301707
+    # data is chdata
+    
+    out = pd.DataFrame(columns=['uptot','lowtot','updif','lowdif'])
+    
+    for f in data.index:
+        UL = data['11CHSTLEUPTHDSRB'][f]
+        UR = data['11CHSTRIUPTHDSRB'][f]
+        LL = data['11CHSTLELOTHDSRB'][f]
+        LR = data['11CHSTRILOTHDSRB'][f]
+    
+        uptot = np.max(UL) + np.max(UR)
+        lowtot = np.max(LL) + np.max(LR)
+        updif = np.max(np.abs(np.subtract(UL,UR)))
+        lowdif = np.max(np.abs(np.subtract(LL,LR)))
+        
+        out = pd.concat((out,pd.DataFrame([[uptot,lowtot,updif,lowdif]],index=[f],columns=['uptot','lowtot','updif','lowdif'])))
+    return out
 
 def _rect_inter_inner(x1,x2):
     n1=x1.shape[0]-1
