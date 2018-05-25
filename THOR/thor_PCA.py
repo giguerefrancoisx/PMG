@@ -6,13 +6,13 @@ get PCA metrics for thoracic deflection
 """
 
 from PMG.COM.data import import_data
-from PMG.COM import arrange
 import pandas as pd
 import numpy as np
 from PMG.COM.get_props import *
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from scipy.stats import anderson_ksamp
+from PMG.COM import bootstrap, plotfuns, arrange
 # initialize files, params
 # input
 directory = 'P:\\AHEC\\Data\\THOR\\'
@@ -106,4 +106,35 @@ PCS2 = PCscore[files2].dropna()
 #%%
 print('A-D p-value: ' + str(anderson_ksamp([PCS1,PCS2]).significance_level))
 
+#%%
+X1 = PCS1.values
+X1_resample = bootstrap.bootstrap_resample(X1,n=bs_n_it)
 
+# centered bootstrap percentile confidence interval
+L1, U1 = bootstrap.get_ci(X1,X1_resample,bs_alpha)
+b1 = bootstrap.get_bins_from_ci(np.mean(X1_resample,axis=1),[L1,U1],bs_nbin[0])
+
+X2 = PCS2.values
+X2_resample = bootstrap.bootstrap_resample(X2,n=bs_n_it)
+    
+L2,U2 = bootstrap.get_ci(X2,X2_resample,bs_alpha)
+b2 = bootstrap.get_bins_from_ci(np.mean(X2_resample,axis=1),[L2,U2],bs_nbin[1])
+
+BSp = bootstrap.test(X1,X2,nbs=bs_n_it)
+display('Bootstrap p-value: ' + str(BSp))
+
+fig = plt.figure()
+ax = plt.axes()
+ax = plotfuns.plot_bs_distribution(ax,(np.mean(X1_resample,axis=1),b1,'OK'),(np.mean(X2_resample,axis=1),b2,'Slip'),[[L1,U1],[L2,U2]])
+ax.set_title(p + '-' + ch)
+plt.show()
+
+fig = plt.figure(figsize=(3,3))
+ax = plt.axes()
+mean1 = np.mean(np.mean(X1_resample,axis=1))
+mean2 = np.mean(np.mean(X2_resample,axis=1))
+ax.bar(['OK','Slip'],[mean1,mean2],0.7,color=[0.4, 0.4, 0.4])
+ax.errorbar(['OK','Slip'],[mean1,mean2],[[mean1-L1,mean2-L2],[U1-mean1,U2-mean2]],ecolor='black',capsize=5,linestyle='none')
+#ax.set_title(p + '-' + ch)
+plt.rc('font',size=12)
+plt.show()
