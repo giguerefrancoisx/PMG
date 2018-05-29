@@ -94,8 +94,8 @@ def writeHDF5(directory, chlist):
             l = ['|']*i+[' ']*(count-i)+['| {:>2}/{}'.format(i, count)]
             print(''.join(l))
             i = i+1
-            
-            new_name = re.search('\w{4}-\d{3,4}(_\d*)?',filename).group().replace('-','N')
+
+            new_name = re.search('\w{4}-\d{3,4}(_\d+)?',filename).group().replace('-','N')
 
             test_store.put(new_name, testframe, format='table')
 
