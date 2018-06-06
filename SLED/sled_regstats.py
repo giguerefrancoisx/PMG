@@ -18,7 +18,7 @@ writefiles = 0
 
 
 if dummy=='Y2':
-    channels = ['Head 3ms','Chest 3ms']
+    channels = ['Head 3ms','Chest 3ms','Head Excursion','Seat Excursion','Seat-Head','Delta Seat Angle']
     exclude = ['SE16-1012_2',
                'SE16-1014_2',
                'SE17-1015_2',

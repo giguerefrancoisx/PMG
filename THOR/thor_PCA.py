@@ -19,54 +19,71 @@ directory = 'P:\\AHEC\\Data\\THOR\\'
 
 # 48 vehicle to vehicle
 # OK
-files1 = ['TC14-015',
-          'TC15-024',
-          'TC16-019',
-          'TC16-205',
-          'TC17-017',
-          'TC17-025',
-          'TC17-028',
-          'TC17-029',
-          'TC17-033',
-          'TC17-206',
-          'TC17-208',
-          'TC17-211']
-# slip
-files2 = ['TC08-107',
-          'TC09-027',
-          'TC11-008',
-          'TC12-003',
-          'TC13-007',
-          'TC13-035',
-          'TC13-036',
-          'TC13-119',
-          'TC14-035',
-          'TC14-141',
-          'TC14-174',
-          'TC14-502',
-          'TC15-155',
-          'TC15-162',
-          'TC15-163',
-          'TC16-016',
-          'TC16-125',
-          'TC17-012',
-          'TC17-030',
-          'TC17-031',
-          'TC17-034',
-          'TC17-201',
-          'TC17-203',
-          'TC17-209',
-          'TC17-210',
-          'TC17-212',
-          'TC17-505']
-writename = 'THOR_48_veh2veh_'
+#files1 = ['TC14-015',
+#          'TC15-024',
+#          'TC16-019',
+#          'TC16-205',
+#          'TC17-017',
+#          'TC17-025',
+#          'TC17-028',
+#          'TC17-029',
+#          'TC17-033',
+#          'TC17-206',
+#          'TC17-208',
+#          'TC17-211']
+## slip
+#files2 = ['TC08-107',
+#          'TC09-027',
+#          'TC11-008',
+#          'TC12-003',
+#          'TC13-007',
+#          'TC13-035',
+#          'TC13-036',
+#          'TC13-119',
+#          'TC14-035',
+#          'TC14-141',
+#          'TC14-174',
+#          'TC14-502',
+#          'TC15-155',
+#          'TC15-162',
+#          'TC15-163',
+#          'TC16-016',
+#          'TC16-125',
+#          'TC17-012',
+#          'TC17-030',
+#          'TC17-031',
+#          'TC17-034',
+#          'TC17-201',
+#          'TC17-203',
+#          'TC17-209',
+#          'TC17-210',
+#          'TC17-212',
+#          'TC17-505']
+#writename = 'THOR_48_veh2veh_'
 
-channels = ['11CHSTLEUPTHDSRB',
-            '11CHSTRIUPTHDSRB',
-            '11CHSTLELOTHDSRB',
-            '11CHSTRILOTHDSRB']
-wherepeaks = np.array(['+tive','+tive','+tive','+tive'])
-cutoff = range(100,1600)
+# 48 barrier
+#files1 = ['TC12-217',
+#          'TC14-016',
+#          'TC14-139',
+#          'TC14-175',
+#          'TC14-180',
+#          'TC14-221',
+#          'TC14-233',
+#          'TC14-241',
+#          'TC16-129',
+#          'TC17-204',
+#          'TC17-205',]
+#files2 = ['TC12-004']
+#writename = 'THOR_48_barrier_'
+
+# Sled
+files1 = ['TC58-278_2',
+          'TC58-278_3']
+files2 = ['TC58-278_4']
+
+channels = ['11PCA00000THAV0B']
+wherepeaks = np.array(['+tive'])
+cutoff = range(1)
 
 files1.sort()
 files2.sort()
@@ -83,6 +100,23 @@ chdata_1 = arrange.test_ch_from_chdict(fulldata_1,cutoff)
 t, fulldata_2 = import_data(directory,channels,tcns=files2)
 chdata_2 = arrange.test_ch_from_chdict(fulldata_2,cutoff)
 t = t.get_values()[cutoff]
+
+#%% get values
+def get_values(data):
+    return data[0]
+
+chdata_1 = chdata_1.applymap(get_values)
+chdata_2 = chdata_2.applymap(get_values)
+
+print('No-slip:')
+print('Mean: ' + str(chdata_1.mean()))
+print('Std: ' + str(chdata_1.std()))
+print('Slip:')
+print('Mean: ' + str(chdata_2.mean()))
+print('Std: ' + str(chdata_2.std()))
+
+print('A-D p-value: ' + str(anderson_ksamp([chdata_1.values.flatten(),chdata_2.values.flatten()]).significance_level))
+
 #%%
 pcm1 = get_PC_metrics(chdata_1)
 pcm2 = get_PC_metrics(chdata_2)
@@ -107,14 +141,14 @@ PCS2 = PCscore[files2].dropna()
 print('A-D p-value: ' + str(anderson_ksamp([PCS1,PCS2]).significance_level))
 
 #%%
-X1 = PCS1.values
+X1 = chdata_1.values.flatten()
 X1_resample = bootstrap.bootstrap_resample(X1,n=bs_n_it)
 
 # centered bootstrap percentile confidence interval
 L1, U1 = bootstrap.get_ci(X1,X1_resample,bs_alpha)
 b1 = bootstrap.get_bins_from_ci(np.mean(X1_resample,axis=1),[L1,U1],bs_nbin[0])
 
-X2 = PCS2.values
+X2 = chdata_2.values.flatten()
 X2_resample = bootstrap.bootstrap_resample(X2,n=bs_n_it)
     
 L2,U2 = bootstrap.get_ci(X2,X2_resample,bs_alpha)

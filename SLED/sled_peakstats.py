@@ -37,16 +37,11 @@ if dummy=='Y7':
 #    channels = ['12PELV0000Y7ACXA']
     wherepeaks = np.array(['-tive'])
 elif dummy=='Y2':
-    channels = ['12HEAD0000Y2ACRA',
-                '12CHST0000Y2ACRC',
-                '12PELV0000Y2ACRA',
-                '12HEAD0000Y2ACXA',
+    channels = ['12HEAD0000Y2ACXA',
                 '12CHST0000Y2ACXC',
-                '12PELV0000Y2ACXA',
                 '12HEAD0000Y2ACZA',
-                '12CHST0000Y2ACZC',
-                '12PELV0000Y2ACZA']
-    wherepeaks = np.array(['+tive','+tive','+tive','+tive','+tive','+tive','+tive','+tive','+tive'])
+                '12CHST0000Y2ACZC']
+    wherepeaks = np.array(['+tive','+tive','+tive','+tive'])
     exclude = ['SE16-1012_2',
                'SE16-1014_2',
                'SE17-1015_2',
@@ -93,10 +88,10 @@ else:
     props['ipeak'] = arrange.arrange_by_peak(props['smth'].applymap(get_ipeak))
     props['i2peak'] = arrange.arrange_by_peak(props['smth'].applymap(get_i2peak))
     props['t2peak'] = get_t2peak(t,props['i2peak'])
-    props['fwhm'] = arrange.arrange_by_peak(get_fwhm(t,props['smth']))
-    props['tfwhm'] = arrange.arrange_by_peak(get_tfwhm(t,props['smth']))
+#    props['fwhm'] = arrange.arrange_by_peak(get_fwhm(t,props['smth']))
+#    props['tfwhm'] = arrange.arrange_by_peak(get_tfwhm(t,props['smth']))
 
-multiprops = {'Dpeak':get_Dpeak(props)}
+#multiprops = {'Dpeak':get_Dpeak(props)}
 #%% plot mean +/- std and distributions
 if plotfigs:
     # compare across sleds for each model
@@ -165,7 +160,7 @@ for m in models:
 
 #%% get differences--method B
 meanprops = {}
-for p in ['peak','t2peak','fwhm']:
+for p in ['peak','t2peak']:
     
     if p=='peak':
         def apply_round(num):
