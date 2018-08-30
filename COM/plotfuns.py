@@ -104,6 +104,9 @@ def plot_ecdf(ax,labels,c1,c2):
 
 # plot at least one line plot. then use eval to plot others
 def plot_multiple(ax,plotin):
+# plotin[i][0] is the time index 
+# plotin[i][1] are the values
+# plotin[i][2] are any additional modifiers 
     for i in range(len(plotin)):
         if len(plotin[i])==1:
             ax.plot(plotin[i])
@@ -128,20 +131,22 @@ def plot_bs_distribution(ax,x1,x2,ci=None):
     ax.legend()
     return ax
 
-def plot_overlay(ax,t,x1,x2):
+def plot_overlay(ax,t,x1,x2,c1=None,c2=None):
+    # x1[0] stores all of the values as arrays of arrays (i.e. the output of chdata.get_values())
+    # x1[1] stores the label
+    if c1==None:
+        c1 = 'b'
+    if c2==None:
+        c2 = 'r'
     for i in range(len(x1[0])):
         if np.isnan(x1[0][i]).all():
             continue
-        if len(x1[0])==1:
-            ax.plot(t,x1[0],color='b',alpha=0.5,label=x1[1])
         else:
-            ax.plot(t,x1[0][i],color='b',alpha=0.5,label=x1[1])
+            ax.plot(t,x1[0][i],color=c1,alpha=0.5,label=x1[1])
     for i in range(len(x2[0])):
         if np.isnan(x2[0][i]).all():
             continue
         if len(x2[0])==1:
-            ax.plot(t,x2[0],color='r',alpha=0.5,label=x2[1])
-        else:
-            ax.plot(t,x2[0][i],color='r',alpha=0.5,label=x2[1])
+            ax.plot(t,x2[0][i],color=c2,alpha=0.5,label=x2[1])
     return ax
     

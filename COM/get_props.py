@@ -157,27 +157,6 @@ def get_tfwhm(t,dataframe):
 def get_mean(data):
     return np.mean(data)
 
-def get_PC_metrics(data):
-    # get metrics for PCA
-    # defined in: https://www.sciencedirect.com/science/article/pii/S0001457517301707
-    # data is chdata
-    
-    out = pd.DataFrame(columns=['uptot','lowtot','updif','lowdif'])
-    
-    for f in data.index:
-        UL = data['11CHSTLEUPTHDSRB'][f]
-        UR = data['11CHSTRIUPTHDSRB'][f]
-        LL = data['11CHSTLELOTHDSRB'][f]
-        LR = data['11CHSTRILOTHDSRB'][f]
-    
-        uptot = np.max(UL) + np.max(UR)
-        lowtot = np.max(LL) + np.max(LR)
-        updif = np.max(np.abs(np.subtract(UL,UR)))
-        lowdif = np.max(np.abs(np.subtract(LL,LR)))
-        
-        out = pd.concat((out,pd.DataFrame([[uptot,lowtot,updif,lowdif]],index=[f],columns=['uptot','lowtot','updif','lowdif'])))
-    return out
-
 def _rect_inter_inner(x1,x2):
     n1=x1.shape[0]-1
     n2=x2.shape[0]-1
@@ -257,3 +236,5 @@ x,y=intersection(x1,y1,x2,y2)
     xy0=T[2:,in_range]
     xy0=xy0.T
     return xy0[:,0],xy0[:,1]
+
+

@@ -57,6 +57,7 @@ def writeHDF5(directory, chlist):
         count = len(xlsonly)
         i = 1
         for filename in xlsonly:
+            print(directory+'/'+filename)
             testframe = pandas.read_excel(directory+'/'+filename,
                                           sheetname=None, header=0,
                                           index_col=0, skiprows=[1,2])
@@ -67,7 +68,11 @@ def writeHDF5(directory, chlist):
             except KeyError as e:
                 raise KeyError('{} of test: {}. File has a different arangement '\
                                'of data or is missing time column'.format(e, filename))
-
+            # keep measurements that have only one value (e.g. HIC)
+            if start>1:
+                single_value = testframe[testframe.columns[testframe.mask(testframe==0).count()==1]].iloc[0,:]
+                testframe.update(single_value.to_frame(name=start+1).T)
+                
             testframe = testframe.iloc[start:end,:]
             testframe.to_csv(directory+filename[:-4]+'.csv', index=False)
             per = i/count*100
@@ -108,7 +113,7 @@ def writeHDF5(directory, chlist):
             for key in test_store.keys():
 
                 tcn = key[1:].replace('N','-')
-                testdata = test_store.select(key, columns=[chlist])
+                testdata = test_store.select(key, columns=chlist) # removed square brackets from columns=chlist
 
                 if ch in testdata.columns:
                     chdata = testdata[[ch]]
@@ -122,6 +127,7 @@ def writeHDF5(directory, chlist):
                 print(', '.join(tcnlist)+'\n')
 
             ch_store.put('C'+ch, framelist, format='table')
+
 #%%%
 #import tables as tb
 #tb.file._open_files.close_all()    #Close all open stores

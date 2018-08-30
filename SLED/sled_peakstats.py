@@ -12,30 +12,25 @@ from PMG.COM.data import import_data
 import pandas as pd
 from PMG.COM import table as tb
 
-dummy = 'Y2'
+dummy = 'Y7'
 plotfigs = 1
 savefigs = 0
 writefiles = 0
 usesmth = 0
 install = 'INSTALL'
 model = 'MODEL'
+cutoff = range(100,850)
 #%%
 table = tb.get('SLED')
 directory = 'P:\\SLED\\Data\\'
 if dummy=='Y7':
-    channels = ['12CHST0000Y7DSXB',
-                '12HEAD0000Y7ACRA',
-                '12CHST0000Y7ACRC',
-                '12PELV0000Y7ACRA',
-                '12HEAD0000Y7ACXA',
-                '12CHST0000Y7ACXC',
-                '12HEAD0000Y7ACZA',
+    channels = ['12CHST0000Y7ACXC',
+                '12CHST0000Y7ACYC',
                 '12CHST0000Y7ACZC',
-                '12PELV0000Y7ACZA']
-    wherepeaks = np.array(['-tive','+tive','+tive','+tive','-tive','-tive','+tive','-tive','-tive'])
+                '12PELV0000Y7ACXA',
+                '12SEBE0000B3FO0D']
+    wherepeaks = np.array(['-tive','+tive'])
     exclude = ['SE16-0204']
-#    channels = ['12PELV0000Y7ACXA']
-    wherepeaks = np.array(['-tive'])
 elif dummy=='Y2':
     channels = ['12HEAD0000Y2ACXA',
                 '12CHST0000Y2ACXC',
@@ -52,7 +47,6 @@ elif dummy=='Y2':
                'SE16-0403',
                'SE17-1025_2',
                'SE17-1026_2']
-cutoff = range(100,1600)
 
 table_y7 = table.query('DUMMY==\'' + dummy + '\'').filter(items=['SE'] + [model] + [install] + ['SLED'])
 table_y7 = table_y7.set_index('SE',drop=True)
@@ -138,7 +132,7 @@ for m in models:
             # number of tests on new_accel > 1 
 #            if len(se_new) == 0 or len(se_old)==0:
 #                continue
-            if len(se_new) == 0 or len(se_decel)==0:
+            if len(se_new) == 0 and len(se_decel)==0:
                 continue
             
             for s in se_new:
@@ -158,6 +152,28 @@ for m in models:
                 plt.savefig(writename + 'overlay_' + ch + '_' + tp + '_' + m + '.png',bbox_inches='tight')
             plt.show()
 
+#%% plot differences
+for ch in channels:
+    for tp in types:
+        for m in models:
+            se_new = np.asarray(table_y7.query(model + '==\'' + m + '\' and ' + install + '==\'' + tp + '\' and SLED==\'new_accel\'').index)
+            se_old = np.asarray(table_y7.query(model + '==\'' + m + '\' and ' + install + '==\'' + tp + '\' and SLED==\'old_accel\'').index)
+            se_decel = np.asarray(table_y7.query(model + '==\'' + m + '\' and ' + install + '==\'' + tp + '\' and SLED==\'new_decel\'').index)
+            
+            se_new = se_new[[~np.isnan(chdata[ch][se_new][i]).all() for i in range(len(se_new))]]
+            se_old = se_old[[~np.isnan(chdata[ch][se_old][i]).all() for i in range(len(se_old))]]
+            se_decel = se_decel[[~np.isnan(chdata[ch][se_decel][i]).all() for i in range(len(se_decel))]]     
+            
+            if len(se_new) == 0:
+                continue
+            
+            avg_new = np.mean(chdata[ch][se_new].values)
+            avg_old = np.mean(chdata[ch][se_old].values)
+            
+            plt.plot(t,avg_old-avg_new,label=m)
+        plt.legend()
+        plt.title(ch + ' ' + tp)
+        plt.show()
 #%% get differences--method B
 meanprops = {}
 for p in ['peak','t2peak']:

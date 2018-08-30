@@ -32,12 +32,40 @@ def test_ch_from_chdict(data,cutoff):
     chdata = pd.DataFrame(index=files,columns=channels)
     
     for ch in channels:
-        for f in files:
-            if f in data[ch].keys():
-                chdata.set_value(f,ch,data[ch][f].get_values()[cutoff])
-            else:
-                chdata.set_value(f,ch,np.matlib.repmat(np.nan,1,len(list(cutoff))))
+        f = data[ch].columns
+        if ((data[ch].loc[cutoff]==0) | (np.isnan(data[ch].loc[cutoff]))).all().all():
+            chdata[ch][f] = data[ch].apply(lambda x: tuple([x[0]])).apply(np.array)
+            for f2 in chdata.index.drop(f):
+                chdata[ch][f2] = np.array([np.nan])
+        else:
+            chdata[ch][f] = data[ch].apply(lambda x: tuple(x.loc[cutoff])).apply(np.array)
+            for f2 in chdata.index.drop(f):
+                chdata[ch][f2] = np.tile(np.nan,len(list(cutoff)))
+    
+#    for ch in channels:
+#        for f in files:
+#            if f in data[ch].columns:
+#                if sum(data[ch][f].get_values()==0)>1: #static value
+#                    data[ch].at[list(cutoff)[0],f] = data[ch][f].get_values()[0]
+#                chdata.at[f,ch] = data[ch][f].get_values()[cutoff]
+#            else:
+#                chdata.at[f,ch] = np.tile(np.nan,len(list(cutoff)))
     return chdata
+
+def t_ch_from_test_ch(data):
+    out = {}
+    for ch in data.columns:
+        out[ch] = pd.DataFrame(np.vstack(data[ch].values),index=data.index).T
+    return out
+
+def names_to_se(table,names):
+    # table is the table
+    # names is a dict with keys categorical names and entires query parameters
+    # return a dict with keys categorical names and entries the corresponding
+    out = {}
+    for n in names.keys():
+        out[n] = list(table.query(names[n]).index)
+    return out
     
 # data is a dataframe
 def arrange_by_peak(data):
@@ -55,6 +83,15 @@ def arrange_by_peak(data):
             out.set_value(i,(ch,'-tive'),data.get_value(i,ch)[0])
             out.set_value(i,(ch,'+tive'),data.get_value(i,ch)[1])
     return out
+
+def sep_by_peak(data):
+    return data.applymap(get_min), data.applymap(get_max)
+
+def get_min(data):
+    return data[0]
+
+def get_max(data):
+    return data[1]
 
 def get_values(data):
     return data[~np.isnan(data)]

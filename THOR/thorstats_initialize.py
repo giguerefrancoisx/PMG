@@ -171,11 +171,11 @@ writename = 'THOR_48_veh2veh_'
 #wherepeaks = np.array(['-tive','-tive','+tive','-tive','-tive','-tive','+tive','-tive','+tive','+tive','+tive','-tive','+tive'])
 #cutoff = range(100,1600)
 
-channels = ['11CHSTLEUPTHDSRB',
-            '11CHSTRIUPTHDSRB',
-            '11CHSTLELOTHDSRB',
-            '11CHSTRILOTHDSRB']
-wherepeaks = np.array(['+tive','+tive','+tive','+tive'])
+channels = ['11CHSTLEUPTHDSXB',
+            '11CHSTRIUPTHDSXB',
+            '11CHSTLELOTHDSXB',
+            '11CHSTRILOTHDSXB']
+wherepeaks = np.array(['-tive','-tive','-tive','-tive'])
 cutoff = range(100,1600)
 
 #channels = ['11CLAVLEINTHFOXA','11CLAVLEOUTHFOXA']
