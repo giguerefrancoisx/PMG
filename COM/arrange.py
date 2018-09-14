@@ -34,7 +34,7 @@ def test_ch_from_chdict(data,cutoff):
     for ch in channels:
         f = data[ch].columns
         if ((data[ch].loc[cutoff]==0) | (np.isnan(data[ch].loc[cutoff]))).all().all():
-            chdata[ch][f] = data[ch].apply(lambda x: tuple([x[0]])).apply(np.array)
+            chdata[ch][f] = data[ch].apply(lambda x: tuple([x.iloc[0]])).apply(np.array)
             for f2 in chdata.index.drop(f):
                 chdata[ch][f2] = np.array([np.nan])
         else:
