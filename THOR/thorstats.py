@@ -11,7 +11,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import cumfreq
 import numpy as np
-import arrange, plotfuns, bootstrap
+import PMG.COM.arrange as arrange
+import PMG.COM.plotfuns as plotfuns
+import PMG.COM.bootstrap as bootstrap
+from scipy.signal import medfilt 
 
 
 
@@ -137,3 +140,26 @@ for p in ['peak','t2peak']:
 #%%
 if writefiles:
     props1['stats'].to_csv(writename + channels[0] + 'stat.csv')    
+
+#%% compare stds
+std1 = pd.DataFrame(np.concatenate(chdata_1['11NECKLO00THFOXA'].get_values()).reshape(len(chdata_1.index),-1),index=chdata_1.index)
+std2 = pd.DataFrame(np.concatenate(chdata_2['11NECKLO00THFOXA'].get_values()).reshape(len(chdata_2.index),-1),index=chdata_2.index)
+combined = pd.concat((std1,std2)).std()
+std1 = std1.std()
+std2 = std2.std()
+
+ti = np.logical_and(combined>std1,combined>std2)
+ti = medfilt(ti,kernel_size=31).astype(bool)
+
+ax = plt.axes()
+ax.plot(t,std1,label='No-slip',color='#e66101')
+ax.plot(t,std2,label='Slip',color='#5e3c99')
+ax.plot(t,combined,label='Combined',color='k')
+ax.axvline(x=t[ti][0],color='r',linewidth=2,label='t='+str(t[ti][0])+'s')
+ax.legend()
+ax.set_xlabel('Time [s]')
+ax.set_ylabel('Standard Deviation [N]')
+ax.set_title('Lower Neck Fx')
+for item in ([ax.title, ax.xaxis.label, ax.yaxis.label, ax.legend] +
+             ax.get_xticklabels() + ax.get_yticklabels()):
+    item.set_fontsize(14)

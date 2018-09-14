@@ -4,11 +4,11 @@ Created on Wed Feb 21 15:55:11 2018
 
 @author: tangk
 """
-import read_data, arrange
+import PMG.read_data as read_data
+import PMG.COM.arrange as arrange
 import pandas as pd
 import numpy as np
-from get_props import *
-from smooth import smooth_peaks
+from PMG.COM.get_props import *
 # initialize files, params
 # input
 dir1 = 'P:\\AHEC\\Data\\THOR\\'
@@ -171,12 +171,12 @@ writename = 'THOR_48_veh2veh_'
 #wherepeaks = np.array(['-tive','-tive','+tive','-tive','-tive','-tive','+tive','-tive','+tive','+tive','+tive','-tive','+tive'])
 #cutoff = range(100,1600)
 
-channels = ['11CHSTLEUPTHDSXB',
-            '11CHSTRIUPTHDSXB',
-            '11CHSTLELOTHDSXB',
-            '11CHSTRILOTHDSXB']
-wherepeaks = np.array(['-tive','-tive','-tive','-tive'])
-cutoff = range(100,1600)
+#channels = ['11CHSTLEUPTHDSXB',
+#            '11CHSTRIUPTHDSXB',
+#            '11CHSTLELOTHDSXB',
+#            '11CHSTRILOTHDSXB']
+#wherepeaks = np.array(['-tive','-tive','+tive','-tive'])
+#cutoff = range(100,1600)
 
 #channels = ['11CLAVLEINTHFOXA','11CLAVLEOUTHFOXA']
 #wherepeaks = np.array(['-tive','-tive'])
@@ -186,9 +186,9 @@ cutoff = range(100,1600)
 #wherepeaks = np.array(['-tive','-tive','+tive'])
 #cutoff = range(100,1600)
 
-#channels = ['11NECKLO00THFOXA','11NECKLO00THMOYB','11NECKUP00THMOYB']
-#wherepeaks = np.array(['+tive','+tive','+tive'])
-#cutoff = range(100,1200)
+channels = ['11NECKLO00THFOXA','11NECKLO00THFOYA']
+wherepeaks = np.array(['+tive','-tive'])
+cutoff = range(100,1500)
 #
 #channels = ['11SPIN0100THACXC','11SPIN1200THACXC','11SEBE0000B3FO0D','11CHST0000THACXC']
 #cutoff = range(100,1600)

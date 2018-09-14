@@ -56,3 +56,46 @@ def initialize(directory,channels,cutoff,cat_names=None,query=None,filt=None):
         se_names = None
     
     return table, t, chdata, se_names
+
+def get_test(tc,channel):
+    # this function is only for retrieving tests stored in P:/Data Analysis/Data
+    # for now only has functionality to read one tc and one channel at a time. 
+    # returns time and data from one channel and one tc
+    tc = '/' + tc.replace('-','N')
+    
+    with pd.HDFStore('P:\\Data Analysis\\Data\\Tests.h5', mode='r+') as test:
+        if channel in test[tc].columns:
+            t = test[tc]['T_10000_0']
+            x = test[tc][channel]
+        else:
+            t = None
+            x = None 
+    
+    return t, x
+
+def update_test_info(update_tests=True,update_channels=False):
+    directory = 'P:\\Data Analysis\\Data\\'
+    with pd.HDFStore(directory + 'Tests.h5') as test_store:
+        tests = test_store.keys()
+        if update_tests:
+            test_names = [i.strip('/').replace('N','-') for i in tests]
+            pd.Series(test_names).to_csv(directory + 'test_names.csv',index=False)
+#            test_store.put('testNames',test_names)
+        if update_channels:
+            channels = []
+            for t in tests:
+                for ch in test_store[t].columns:
+                    if not ch in channels:
+                        channels.append(ch)
+            pd.Series(channels).to_csv(directory + 'channel_names.csv',index=False)
+#            test_store.put('channelNames',channels)
+#            pd.to_csv('channel_names.csv')
+
+def get_test_info():
+    directory = 'P:\\Data Analysis\\Data\\'
+    test_names = pd.read_csv(directory + 'test_names.csv',header=None)
+    channel_names = pd.read_csv(directory + 'channel_names.csv',header=None)
+#    with pd.HDFStore(directory + 'Tests.h5') as test_store:
+#        test_names = test_store['testNames']
+#        channel_names = test_store['channelNames']
+    return np.concatenate(test_names.values), np.concatenate(channel_names.values)

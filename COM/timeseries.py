@@ -78,7 +78,13 @@ def estimate_ts_variance(chdata,tclist=None,channels=None,n=1,method='diff'):
             dist = np.array([])
             for i, tc in enumerate(tclist[k]):
                 dist = np.append(dist,get_distribution(chdata[ch][tclist[k]],i,n=n,method=method))
-            lp, up = get_pctile(dist)
-            lp_out.at[k,ch] = lp
-            up_out.at[k,ch] = up
+            if not np.isnan(dist).all():
+                if np.isnan(dist).any():
+                    dist = dist[~np.isnan(dist)]
+                lp, up = get_pctile(dist)
+                lp_out.at[k,ch] = lp
+                up_out.at[k,ch] = up
+            else:
+                lp_out.at[k,ch] = np.nan
+                up_out.at[k,ch] = np.nan
     return lp_out, up_out

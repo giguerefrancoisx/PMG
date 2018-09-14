@@ -121,38 +121,6 @@ axs[2].plot(t,xdata['TC13-010'],label='TC13-005 (Fusion Plug-in)')
 axs[2].legend()
 axs[2].set_xlabel('Time [s]')
 
-#%% try quiver
-from mpl_toolkits.mplot3d import Axes3D
-for i in range(0,1599,50):    
-    x = [np.mean(thd1['11HEAD0000THACXA'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN0100THACXC'].iloc[0,i:i+49]),
-         np.mean(thd1['11CHST0000THACXC'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN1200THACXC'].iloc[0,i:i+49]),
-         np.mean(thd1['11ABDOUP00THACXA'].iloc[0,i:i+49]),
-         np.mean(thd1['11PELV0000THACXA'].iloc[0,i:i+49])]
-    y = [np.mean(thd1['11HEAD0000THACYA'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN0100THACYC'].iloc[0,i:i+49]),
-         np.mean(thd1['11CHST0000THACYC'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN1200THACYC'].iloc[0,i:i+49]),
-         0,
-         np.mean(thd1['11PELV0000THACYA'].iloc[0,i:i+49])]
-    z = [np.mean(thd1['11HEAD0000THACZA'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN0100THACZC'].iloc[0,i:i+49]),
-         np.mean(thd1['11CHST0000THACZC'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN1200THACZC'].iloc[0,i:i+49]),
-         0,
-         np.mean(thd1['11PELV0000THACZA'].iloc[0,i:i+49])]
-    
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    ax.plot([0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[14,13,12,8,6,4,2,0],marker='.',markersize=10)
-    ax.quiver([0,0,0,0,0,0],[0,0,0,0,0,0],[14,8,6,4,2,0],x,y,z,arrow_length_ratio=1)
-#ax.plot([0,0,0,0],[-1,-0.5,0.5,1],[10,10,10,10],marker='.',markersize=10)
-#ax.plot([0,0.5,1,1,1],[0,1,1,1,1],[0,-2,-3,-4,-6],marker='.',markersize=10)
-#ax.plot([0,0.5,1,1,1],[0,-1,-1,-1,-1],[0,-2,-3,-4,-6],marker='.',markersize=10)
-
-#ax.quiver([0],[0],[0],[0.01],[0.01],[0.01])
-
 #%% plot multiple channels at once
 channels_to_plot = ['11HEAD0000THACXA','11SPIN0100THACXC','11CHST0000THACXC','11SPIN1200THACXC','11PELV0000THACXA']
 for i in range(10):
@@ -186,62 +154,3 @@ import plotfuns
 ch = '11CLAVRIOUTHFOZA'
 x = thd1[ch].append(thd2[ch])
 f = plotfuns.plot_full(t,x,list(x.index.values),[4,5],(30,20))
-
-#%% 2d quiver
-#for i in range(0,1599,50):    
-for i in range(0,299,100):
-    x = np.negative([np.mean(thd1['11HEAD0000THACXA'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN0100THACXC'].iloc[0,i:i+49]),
-         np.mean(thd1['11CHST0000THACXC'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN1200THACXC'].iloc[0,i:i+49]),
-         np.mean(thd1['11ABDOUP00THACXA'].iloc[0,i:i+49]),
-         np.mean(thd1['11PELV0000THACXA'].iloc[0,i:i+49])])
-    y = [np.mean(thd1['11HEAD0000THACYA'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN0100THACYC'].iloc[0,i:i+49]),
-         np.mean(thd1['11CHST0000THACYC'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN1200THACYC'].iloc[0,i:i+49]),
-         0,
-         np.mean(thd1['11PELV0000THACYA'].iloc[0,i:i+49])]
-    z = [np.mean(thd1['11HEAD0000THACZA'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN0100THACZC'].iloc[0,i:i+49]),
-         np.mean(thd1['11CHST0000THACZC'].iloc[0,i:i+49]),
-         np.mean(thd1['11SPIN1200THACZC'].iloc[0,i:i+49]),
-         0,
-         np.mean(thd1['11PELV0000THACZA'].iloc[0,i:i+49])]
-    fig, axs = plt.subplots(2,2,sharey='all',figsize=(10,10))
-    
-    axs[0][0].plot([0,0,0,0,0,0,0,0],[7,6,5.5,4,3,2,1,0],marker='.',markersize=10)
-    axs[0][0].plot([-1,-0.5,0.5,1],[5,5,5,5],marker='.',markersize=10)
-    axs[0][0].plot([0,-1.5,-1.5,-1.5,-1.5],[0,0,-2,-3,-4],marker='.',markersize=10)
-    axs[0][0].plot([0,1.5,1.5,1.5,1.5],[0,0,-2,-3,-4],marker='.',markersize=10)
-    axs[0][0].quiver([0,0,0,0,0,0],[7,4,3,2,1,0],y,z)
-    axs[0][0].grid()
-    axs[0][0].set_aspect('equal')
-    
-    axs[0][1].plot([0,0,0,0,0,0,0,0],[7,6,5.5,4,3,2,1,0],marker='.',markersize=10)
-    axs[0][1].plot([0],[5],marker='.',markersize=10)
-    axs[0][1].plot([0,-2,-2],[0,0,-4])
-    axs[0][1].plot([0,-1],[0,0],marker='.',markersize=10)
-    axs[0][1].plot([-2,-2,-2],[-2,-3,-4],marker='.',markersize=10)
-    axs[0][1].quiver([0,0,0,0,0,0],[7,4,3,2,1,0],x,z)
-    axs[0][1].grid()
-    axs[0][1].set_aspect('equal')
-    
-    axs[1][0].plot([0,0,0,0,0,0,0,0],[7,6,5.5,4,3,2,1,0],marker='.',markersize=10)
-    axs[1][0].plot([-1,-0.5,0.5,1],[5,5,5,5],marker='.',markersize=10)
-    axs[1][0].plot([0,-1.5,-1.5,-1.5,-1.5],[0,0,-2,-3,-4],marker='.',markersize=10)
-    axs[1][0].plot([0,1.5,1.5,1.5,1.5],[0,0,-2,-3,-4],marker='.',markersize=10)
-    axs[1][0].quiver([0,0,0,0,0,0],[7,4,3,2,1,0],x,z)
-    axs[1][0].grid()
-    axs[1][0].set_aspect('equal')
-    
-    axs[1][1].plot([0,0,0,0,0,0,0,0],[7,6,5.5,4,3,2,1,0],marker='.',markersize=10)
-    axs[1][1].plot([0],[5],marker='.',markersize=10)
-    axs[1][1].plot([0,-2,-2],[0,0,-4])
-    axs[1][1].plot([0,-1],[0,0],marker='.',markersize=10)
-    axs[1][1].plot([-2,-2,-2],[-2,-3,-4],marker='.',markersize=10)
-    axs[1][1].quiver([0,0,0,0,0,0],[7,4,3,2,1,0],y,z)
-    axs[1][1].grid()
-    axs[1][1].set_aspect('equal')
-
-
