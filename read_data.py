@@ -9,6 +9,7 @@ from PMG.COM.openbook import openHDF5
 from PMG.COM import arrange
 import numpy as np
 import os
+import h5py
 # reads data and returns dictionary 
 
 # as a single dictionary
@@ -19,17 +20,6 @@ def read_merged(directory,filename):
         print('Reading file ' + directory + file + '(SAI).csv')
         full_data[file] = pd.read_csv(directory + file + '(SAI).csv')
     return full_data
-
-# as two dictionaries: target and bullet
-# tarfile is a list of strings containing file names of targets within a directory
-# bulfile is a list of strings containing file names of bullets within a directory
-def read_split(directory,tarfile,bulfile):
-    tar = {}
-    bul = {}
-    for i in len(tarfile):
-        tar[tarfile[i-1]] = pd.read_csv(directory + tarfile[i-1] + '(SAI).csv')
-        bul[bulfile[i-1]] = pd.read_csv(directory + bulfile[i-1] + '(SAI).csv')
-    return tar, bul # return target, bullet files respectively. 
 
 def read_table(file):
     table = pd.read_csv(file)
@@ -45,14 +35,13 @@ def read_from_common_store(tc=None,channels=None):
     #if either of the inputs are none, read everything
     if tc==None:
         tc = np.concatenate(pd.read_csv(directory + 'test_names.csv',header=None).values)
-    tc_hdf = ['/' + i.replace('-','N') for i in tc]
     if channels==None:
         channels = np.concatenate(pd.read_csv(directory + 'test_names.csv',header=None).values)       
-    with pd.HDFStore(directory + 'Tests.h5',mode='r+') as test_store:
-        test_fulldata = {i: test_store.select(i) for i in tc_hdf}
+    with h5py.File(directory+'Tests.h5','r') as test_store:
+        test_fulldata = {i: arrange.h5py_to_df(test_store[i.replace('-','N')]).rename(lambda x: x.lstrip('X'),axis=1) for i in tc}
     for ch in channels:
-        fulldata[ch] = pd.concat([test_fulldata[i][ch].rename(i[1:].replace('N','-')) for i in tc_hdf if ch in test_fulldata[i].columns],axis=1)
-    t = test_fulldata[tc_hdf[0]].iloc[:4100,0].round(4)
+        fulldata[ch] = pd.concat([test_fulldata[i][ch].rename(i) for i in tc if ch in test_fulldata[i].columns],axis=1)
+    t = test_fulldata[tc[0]].iloc[:4100,0].round(4)
     return t, fulldata
 
 def initialize(directory,channels,cutoff,cat_names=None,query=None,filt=None):
@@ -80,13 +69,15 @@ def initialize(directory,channels,cutoff,cat_names=None,query=None,filt=None):
 
 def get_test(tc,channel):
     # this function is only for retrieving tests stored in P:/Data Analysis/Data
-    # for now only has functionality to read one tc and one channel at a time. 
+    # only reads one tc and one channel at a time. 
     # returns time and data from one channel and one tc
     tc = '/' + tc.replace('-','N')
+    channel = 'X' + channel
     
-    with pd.HDFStore('P:\\Data Analysis\\Data\\Tests.h5', mode='r+') as test:
-        if channel in test[tc].columns:
-            t = test[tc]['T_10000_0']
+#    with pd.HDFStore('P:\\Data Analysis\\Test\\Tests.h5', mode='r+') as test:
+    with h5py.File('P:\\Data Analysis\\Data\\Tests.h5','r') as test:
+        if channel in test[tc].dtype.names:
+            t = test[tc]['XT_10000_0']
             x = test[tc][channel]
         else:
             t = None
@@ -94,10 +85,11 @@ def get_test(tc,channel):
     
     return t, x
 
-def update_test_info(update_tests=True,update_channels=False):
+def update_test_info(update_tests=True,update_channels=True):
     directory = 'P:\\Data Analysis\\Data\\'
-    with pd.HDFStore(directory + 'Tests.h5') as test_store:
-        tests = test_store.keys()
+    with h5py.File(directory+'Tests.h5','r') as test_store:
+#    with pd.HDFStore(directory + 'Tests.h5') as test_store:
+        tests = list(test_store.keys())
         if update_tests:
             test_names = [i.strip('/').replace('N','-') for i in tests]
             pd.Series(test_names).to_csv(directory + 'test_names.csv',index=False)
@@ -105,7 +97,7 @@ def update_test_info(update_tests=True,update_channels=False):
         if update_channels:
             channels = []
             for t in tests:
-                for ch in test_store[t].columns:
+                for ch in [i.lstrip('X') for i in test_store[t].dtype.names]:
                     if not ch in channels:
                         channels.append(ch)
             pd.Series(channels).to_csv(directory + 'channel_names.csv',index=False)
@@ -116,7 +108,4 @@ def get_test_info():
     directory = 'P:\\Data Analysis\\Data\\'
     test_names = pd.read_csv(directory + 'test_names.csv',header=None)
     channel_names = pd.read_csv(directory + 'channel_names.csv',header=None)
-#    with pd.HDFStore(directory + 'Tests.h5') as test_store:
-#        test_names = test_store['testNames']
-#        channel_names = test_store['channelNames']
     return np.concatenate(test_names.values), np.concatenate(channel_names.values)

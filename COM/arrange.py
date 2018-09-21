@@ -42,14 +42,6 @@ def test_ch_from_chdict(data,cutoff):
             for f2 in chdata.index.drop(f):
                 chdata[ch][f2] = np.tile(np.nan,len(list(cutoff)))
     
-#    for ch in channels:
-#        for f in files:
-#            if f in data[ch].columns:
-#                if sum(data[ch][f].get_values()==0)>1: #static value
-#                    data[ch].at[list(cutoff)[0],f] = data[ch][f].get_values()[0]
-#                chdata.at[f,ch] = data[ch][f].get_values()[cutoff]
-#            else:
-#                chdata.at[f,ch] = np.tile(np.nan,len(list(cutoff)))
     return chdata
 
 def t_ch_from_test_ch(data):
@@ -95,3 +87,7 @@ def get_max(data):
 
 def get_values(data):
     return data[~np.isnan(data)]
+
+def h5py_to_df(data):
+    #convert a compound dataset written using h5py into a pandas dataframe
+    return pd.DataFrame(data[:],columns=data.dtype.names)
