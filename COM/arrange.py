@@ -91,3 +91,14 @@ def get_values(data):
 def h5py_to_df(data):
     #convert a compound dataset written using h5py into a pandas dataframe
     return pd.DataFrame(data[:],columns=data.dtype.names)
+
+def align(t1,t2,data):
+    # align (t2, data) according to t1
+    new_t = np.tile(np.nan,len(t1))
+    
+    for i, t in enumerate(t1):
+        if t in t2:
+            new_t[i] = data[t2==t]
+            
+    return new_t
+            

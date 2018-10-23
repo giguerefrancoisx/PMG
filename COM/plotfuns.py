@@ -9,6 +9,7 @@ Created on Wed Jan 17 12:30:52 2018
 import scipy.cluster.hierarchy as hier
 import matplotlib.pyplot as plt
 import numpy as np
+from plotly.offline import init_notebook_mode, plot
 
 # plot dendrogram
 def plot_dendrogram(links,models,mtc,mtd):
@@ -146,7 +147,37 @@ def plot_overlay(ax,t,x1,x2,c1=None,c2=None):
     for i in range(len(x2[0])):
         if np.isnan(x2[0][i]).all():
             continue
-        if len(x2[0])==1:
+        else:
             ax.plot(t,x2[0][i],color=c2,alpha=0.5,label=x2[1])
     return ax
+
+def adjust_font_sizes(ax, dictionary):
+    # dictionary should be in the format {'label': fontsize}
+    # e.g. {'title': 20}
+    # possible keys are: 'ticklabels','xticklabel','yticklabel','legend','title','axlabels','xlabel','ylabel'    
+    if 'axlabels' in dictionary:
+        ax.xaxis.get_label().set_fontsize(dictionary['axlabels'])
+        ax.yaxis.get_label().set_fontsize(dictionary['axlabels'])
     
+    if 'xlabel' in dictionary:
+        ax.xaxis.get_label().set_fontsize(dictionary['xlabel'])
+        
+    if 'ylabel' in dictionary:
+        ax.yaxis.get_label().set_fontsize(dictionary['ylabel'])
+    
+    if 'ticklabels' in dictionary:
+        ax.tick_params(labelsize=dictionary['ticklabels'])
+        
+    if 'xticklabel' in dictionary:
+        ax.tick_params(labelsize=dictionary['xticklabel'],axis='x')
+    
+    if 'yticklabel' in dictionary:
+        ax.tick_params(labelsize=dictionary['yticklabel'],axis='y')
+    
+    if 'title' in dictionary:
+        ax.title.set_fontsize(dictionary['title'])
+        
+    if 'legend' in dictionary:
+        ax.legend_.get_texts()[0].set_fontsize(dictionary['legend'])        
+    
+    return ax

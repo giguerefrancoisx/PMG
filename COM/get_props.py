@@ -154,8 +154,39 @@ def get_tfwhm(t,dataframe):
                 out.set_value(i,col,[fwhm1, fwhm2])
     return out
 
+def get_tonset(t,dataframe):
+    # dataframe is in the form of chdata
+    out = pd.DataFrame(index=dataframe.index,columns=dataframe.columns)
+    for col in dataframe.columns:
+        for i in dataframe.index:
+            data = dataframe.at[i,col]
+            if np.isnan(data).all():
+                out.at[i,col] = [np.nan,np.nan]
+            else:
+                onset_pos = np.repeat(0.1*max(data),len(t))
+                onset_neg = np.repeat(0.1*min(data),len(t))
+                
+                tonset_pos = intersection(t,data,t,onset_pos)
+                tonset_neg = intersection(t,data,t,onset_neg)
+                
+                out.at[i,col] = (tonset_neg[0][0], tonset_pos[0][0])
+    return out
+
+
 def get_mean(data):
     return np.mean(data)
+
+def get_shifted(row):
+    # row is in the form of a pandas series
+    row[['Down_x','Up_x']] = row[['Down_x','Up_x']] - row['Down_x'][0]
+    row[['Down_y','Up_y']] = row[['Down_y','Up_y']] - row['Down_y'][0]
+    return row
+
+def get_angle(row):
+    dx = np.abs(row['Up_x']-row['Down_x'])
+    dy = np.abs(row['Up_y']-row['Down_y'])
+    angle = np.degrees(np.arctan(dx/dy))
+    return angle
 
 def _rect_inter_inner(x1,x2):
     n1=x1.shape[0]-1
