@@ -4,12 +4,11 @@ Created on Tue Apr 17 09:44:50 2018
 
 @author: tangk
 """
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from PMG.COM.plotfuns import *
-from PMG.COM.helper import r2, is_all_nan
+from PMG.COM.helper import r2, is_all_nan, query_list
 from PMG.COM.get_props import peakval, get_ipeak, get_angle, get_shifted, smooth_data
 from PMG.read_data import initialize, get_se_angle
 from PMG.COM.arrange import sep_by_peak, align
@@ -89,7 +88,7 @@ angle_t = get_se_angle(chdata.index)['Time']/1000
 
 displacement = get_se_angle(chdata.index).applymap(lambda x: x-x[0])[['Up_x', 'Up_y', 'Down_x', 'Down_y']].rename(lambda x: 'D'+x,axis=1)
 #x = pd.concat([angle_t,se_angles],axis=1).apply(lambda x: align(t,x['Time'],x['Angle']),axis=1)
-chdata = chdata.join(se_angles.apply(lambda x: x-x[0]))
+chdata = chdata.join(se_angles.apply(lambda x: x-x[0]),sort=True)
 chdata = pd.concat([chdata,displacement],axis=1).applymap(lambda x: np.array([x]) if type(x)==np.float else x)
 chdata = chdata.join(chdata[['12CHST0000Y7ACXC','12PELV0000Y7ACXA']].apply(lambda x: x['12CHST0000Y7ACXC']-x['12PELV0000Y7ACXA'],axis=1).rename('Chest-Pelvis_tvar'))
 chdata = chdata.join(chdata[['12HEAD0000Y7ACXA','12PELV0000Y7ACXA']].apply(lambda x: x['12HEAD0000Y7ACXA']-x['12PELV0000Y7ACXA'],axis=1).rename('Head-Pelvis_tvar'))
@@ -356,15 +355,18 @@ for ch in plot_channels:
     ax = adjust_font_sizes(ax,{'ticklabels':18,'title':20,'ylabel':18})
     print(stattable.loc[i_old,ch]-stattable.loc[i_new,ch])
         
-#%%
+#%% plot overlays model-by-model
 from PMG.COM.helper import is_all_nan
 
-plot_channels = ['12NECKUP00Y7FORA']
+plot_channels = [
+            '12NECKUP00Y7FOXA',
+            '12NECKUP00Y7FOZA',
+            '12LUSP0000Y7FOXA']
 for d in dummies:
     if d=='Y7':
         installs = ['H1','H3','HB','LB']
     else:
-        installs = ['B0','B11','B12']
+        installs = ['B0','B11','B12','C1']
         
     for c in comparison:
         for ch in plot_channels:
@@ -406,7 +408,43 @@ for d in dummies:
                     plt.legend(bbox_to_anchor=(1,1))
                     plt.show()
                     plt.close(fig)
+#%% plot seat trajectories in B11 and B12 installations
+models = ['Evenflo Embrace  CRABI','SNUGRIDE CRABI','Cybex Aton Q']
+sleds = ['new_accel','old_accel','new_decel']
+for c in sleds:
+    for m in models:
+        subset = table.query('MODEL==\'' + m + '\' and (INSTALL==\'B11\' or INSTALL==\'B12\') and SLED==\''+c+'\'')
+        fig, ax = plt.subplots()
+        lines = {}
+        for se in subset.index:
+            if subset.at[se,'SLED']=='new_accel':
+                plot_colour = 'IndianRed'
+                name2 = ' (New Bench)'
+            elif subset.at[se,'SLED']=='old_accel':
+                plot_colour = 'SkyBlue'
+                name2 = ' (Old Bench)'
+            elif subset.at[se,'SLED']=='new_decel':
+                plot_colour='g'
+                name2 = ' (Deceleration Sled)'
                 
+            if subset.at[se,'INSTALL']=='B11':
+                line = '-'
+                name1 = 'Type 2 Belt'
+            elif subset.at[se,'INSTALL']=='B12':
+                line = '--'
+                name1 = 'UAS'
+                
+            l = ax.plot(-chdata.at[se,'DUp_x'],chdata.at[se,'DUp_y'],line,color=plot_colour,label=name1)
+            lines[l[0]._label] = l[0]
+        ax.set_title(m.rstrip(' CRABI') + name2)
+        ax.legend(handles=lines.values())
+        ax.set_xlim([0,220])
+        ax.set_ylim([-220,0])
+        ax.set_xlabel('Excursion [mm]')
+        ax.set_ylabel('V. Displacement [mm]')
+        ax = adjust_font_sizes(ax,{'ticklabels':18,'title':20,'axlabels':18,'legend':18})
+        plt.show()
+        plt.close(fig)
 #%% find which comparisons have p<0.05 and beta>threshold 
 with open(directory+'params.json','r') as json_file:
     to_JSON = json.load(json_file)
@@ -483,11 +521,12 @@ res.to_csv(directory + 'comparison.csv')
             
 #res.append({'Dummy':1,'Comparison':2,'Install':3,'Response':4,'p':5,'beta':6},ignore_index=True)
 
-#%%
-i = table.query('DUMMY==\'Y7\'').index
+#%% regression
+i = table.query('INSTALL==\'HB\'').index
 
-ch0_list = ['Chest_3ms']
-
+#ch0_list = ['Head_3ms',
+#            'Chest_3ms']
+ch0_list = ['Min_12NECKUP00Y7FOXA']
 #plot_channels = ['Max_12HEAD0000Y2ACRA',
 #                 'Max_12CHST0000Y2ACRC',
 #                 'Head_3ms',
@@ -499,14 +538,15 @@ ch0_list = ['Chest_3ms']
 #                 'Min_DDown_y']
 #plot_channels = ['Min_12PELV0000Y7ACXA',
 #                 'Min_12PELV0000Y7ACZA']
-plot_channels = [ch for ch in stattable.columns if not 'Y2' in ch and not 'ACR' in ch and not '3ms' in ch]
+plot_channels = ['Max_12NECKUP00Y7FOZA']
+#plot_channels = [ch for ch in stattable.columns if not 'Y2' in ch and not 'ACR' in ch and not '3ms' in ch]
 
 #i_old = table.query('DUMMY==\'Y7\' and (INSTALL==\'HB\' or INSTALL==\'LB\') and SLED==\'old_accel\'').index
 #i_new = table.query('DUMMY==\'Y7\' and (INSTALL==\'HB\' or INSTALL==\'LB\') and SLED==\'new_accel\'').index
 #i_decel = table.query('DUMMY==\'Y7\' and (INSTALL==\'HB\' or INSTALL==\'LB\') and SLED==\'new_decel\'').index
-i_old = table.query('DUMMY==\'Y2\' and SLED==\'old_accel\'').index
-i_new = table.query('DUMMY==\'Y2\' and SLED==\'new_accel\'').index
-i_decel = table.query('DUMMY==\'Y2\' and SLED==\'new_decel\'').index
+i_old = table.query('INSTALL==\'HB\' and SLED==\'old_accel\'').index
+i_new = table.query('INSTALL==\'HB\' and SLED==\'new_accel\'').index
+i_decel = table.query('INSTALL==\'HB\' and SLED==\'new_decel\'').index
 grp = {'old':i_old,'new':i_new,'decel':i_decel}
 
 for ch0 in ch0_list:
@@ -547,7 +587,7 @@ for ch0 in ch0_list:
         if len(list_rsq)==0:
             plt.close(fig)
             continue
-        elif max(list_rsq)<0.3:
+        elif max(list_rsq)<0.0:
             plt.close(fig)
             continue
         
@@ -557,7 +597,7 @@ for ch0 in ch0_list:
         plt.show()
         plt.close(fig)
 
-#%%
+#%% get euclidean distance between configurations
 subset = table.query('DUMMY==\'Y2\' and INSTALL!=\'H1\' and INSTALL!=\'B22\' and SLED!=\'new_decel\'')
 subset_ch = ['DUp_x','DDown_x','DUp_y','DDown_y']
 subset_chdata = chdata.loc[subset.index,subset_ch]
@@ -597,20 +637,88 @@ for i in subset['INSTALL'].unique():
     distances[i] = pd.Series(distances[i])
 
 mean_distances = {i: distances[i].mean() for i in distances}
-plt.bar(mean_distances.keys(),[mean_distances[i] for i in mean_distances])
+std_distances = {i: distances[i].std() for i in distances}
+
+fig, ax = plt.subplots()
+ax.bar(mean_distances.keys(),
+       np.asarray(list(mean_distances.values()))/max(mean_distances.values()),
+       yerr=np.asarray(list(std_distances.values()))/max(mean_distances.values()),
+       capsize=6,
+       error_kw={'elinewidth':2,'capthick':2},
+       color=(0.65,0.65,0.65))
+ax.set_ylabel('Relative Distance')
+ax.set_title('(Title TBD)')
+ax = adjust_font_sizes(ax,{'ticklabels':18,'title':20,'ylabel':18})
+
+#%% euclidean distance of B11 vs B12
+models = ['Evenflo Embrace  CRABI','SNUGRIDE CRABI','Cybex Aton Q']
+sleds = ['new_accel','old_accel','new_decel']
+indices = np.arange(len(models))
+distances = {i: {} for i in comparison}
+subset_ch = ['DUp_x','DDown_x','DUp_y','DDown_y']
+subset = query_list(query_list(table,'MODEL',models),'INSTALL',['B11','B12'])
+subset_chdata = chdata.loc[subset.index,subset_ch]
+drop = subset_chdata['DUp_x'][subset_chdata['DUp_x'].apply(is_all_nan)].index
+subset_chdata = subset_chdata.drop(drop)
+subset = subset.drop(drop)
+
+min_len = subset_chdata.applymap(len).min().min()
+subset_chdata = subset_chdata.applymap(lambda x: x[:min_len])
+
+distances = pd.DataFrame(index=sleds,columns=models)
+for c in sleds:
+    for m in models:
+        i_b11 = subset.query('SLED==\'' + c + '\' and INSTALL==\'B11\' and MODEL==\'' + m + '\'').index
+        i_b12 = subset.query('SLED==\'' + c + '\' and INSTALL==\'B12\' and MODEL==\'' + m + '\'').index
         
-#%%
+        x_b11 = subset_chdata.loc[i_b11,subset_ch]
+        x_b12 = subset_chdata.loc[i_b12,subset_ch]
+        
+        if len(x_b11)>1:
+            x_b11 = x_b11.apply(lambda x: np.mean(np.vstack(x),axis=0))
+        else:
+            x_b11 = x_b11.apply(lambda x: x.values[0])     
+            
+        if len(x_b12)>1:
+            x_b12 = x_b12.apply(lambda x: np.mean(np.vstack(x),axis=0))
+        else:
+            x_b12 = x_b12.apply(lambda x: x.values[0])
+            
+        dist = x_b11.sub(x_b12).applymap(lambda x: x**2).sum().sum()
+        distances.at[c,m] = dist
+
+for c in comparison:
+    fig, ax = plt.subplots()
+    max_dist = distances.loc[['new_accel',c]].max().max()
+    ax.bar(indices-width/2,distances.loc['new_accel']/max_dist,width,color='IndianRed',label='New Bench')
+    if c=='old_accel':
+        plot_colour = 'SkyBlue'
+        name = 'Old Bench'
+    else:
+        plot_colour = '#589F58'
+        name = 'Deceleration Sled'
+    ax.bar(indices+width/2,distances.loc[c]/max_dist,width,color=plot_colour,label=name)
+    ax.set_xticks(indices)
+    ax.set_xticklabels([i.rstrip(' CRABI').replace(' ','\n') for i in distances.columns])
+    ax.legend(bbox_to_anchor=(1.1,0.6))
+    ax.set_ylabel('Relative Distance')
+    ax.set_title('(Title TBD)')
+    ax = adjust_font_sizes(ax,{'ticklabels': 18,'title': 20,'legend':18,'ylabel':18})
+
+#%% plot overlay
 from PMG.COM.plotfuns import plot_overlay
 #plot_channels = [ch for ch in chdata.columns if not 'Y2' in ch and not 'ACR' in ch and not '3ms' in ch]
-plot_channels = ['12LUSP0000Y7FOZA']
-i_old = table.query('DUMMY==\'Y7\' and INSTALL==\'H3\' and SLED==\'old_accel\'').index
-i_new = table.query('DUMMY==\'Y7\' and INSTALL==\'H3\' and SLED==\'new_accel\'').index
+plot_channels = ['12NECKUP00Y7FOXA',
+                 '12NECKUP00Y7FOZA']
+i_old = table.query('INSTALL==\'HB\' and SLED==\'old_accel\'').index
+i_new = table.query('INSTALL==\'HB\' and SLED==\'new_accel\'').index
 
 for ch in plot_channels:
     if chdata.loc[i_old,ch].apply(is_all_nan).all() or chdata.loc[i_new,ch].apply(is_all_nan).all():
         continue
     
     fig, ax = plt.subplots()
+#    ax = plot_overlay(ax,angle_t,[chdata.loc[i_old,ch].values,'old'],[chdata.loc[i_new,ch].values,'new'])
     ax = plot_overlay(ax,t,[chdata.loc[i_old,ch].values,'old'],[chdata.loc[i_new,ch].values,'new'])
     ax.set_title(ch)
     ax.legend(bbox_to_anchor=(1.1,1))

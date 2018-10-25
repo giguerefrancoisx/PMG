@@ -20,6 +20,7 @@ def get_diff(x,y,lb,ub,method='diff'):
         return np.logical_or(y-x<lb,y-x>ub)    
 
 def mark_diff(ax,t,x,y,lb,ub,xlab=None,ylab=None,kernel_size=1,method='diff',tlim=None):
+    # lb is a negative number
     if not method in ['diff','step','alt']:
         print('Error: Method must be one of diff, step, or alt!')
     di = np.logical_or(get_diff(x,y,lb,ub,method=method),get_diff(y,x,lb,ub,method=method))

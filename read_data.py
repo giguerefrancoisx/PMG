@@ -34,14 +34,30 @@ def read_from_common_store(tc=None,channels=None):
     fulldata = {}
     #if either of the inputs are none, read everything
     if tc==None:
-        tc = np.concatenate(pd.read_csv(directory + 'test_names.csv',header=None).values)
+        tc = np.concatenate(pd.read_csv('P:\\Data Analysis\\Data\\test_names.csv',header=None).values)
+        directories = ['P:\\Data Analysis\\Data\\TC\\','P:\\Data Analysis\\Data\\SE\\']
+    else:
+        directories = []
+        read_tc = [i for i in tc if i[:2]=='TC']
+        read_se = [i for i in tc if i[:2]=='SE']
+        
+        if len(read_tc)>0:
+            directories.append('P:\\Data Analysis\\Data\\TC\\')
+        if len(read_se)>0:
+            directories.append('P:\\Data Analysis\\Data\\SE\\')
     if channels==None:
-        channels = np.concatenate(pd.read_csv(directory + 'test_names.csv',header=None).values)       
-    with h5py.File(directory+'Tests.h5','r') as test_store:
-        test_fulldata = {i: arrange.h5py_to_df(test_store[i.replace('-','N')]).rename(lambda x: x.lstrip('X'),axis=1) for i in tc}
-    for ch in channels:
-        fulldata[ch] = pd.concat([test_fulldata[i][ch].rename(i) for i in tc if ch in test_fulldata[i].columns],axis=1)
-    t = test_fulldata[tc[0]].iloc[:4100,0].round(4)
+        channels = np.concatenate(pd.read_csv('P:\\Data Analysis\\Data\\test_names.csv',header=None).values)       
+
+    for directory in directories: 
+        with h5py.File(directory+'Tests.h5','r') as test_store:
+            test_fulldata = {i: arrange.h5py_to_df(test_store[i.replace('-','N')]).rename(lambda x: x.lstrip('X'),axis=1) for i in tc}
+        for ch in channels:
+            if not ch in fulldata:
+                fulldata[ch] = pd.concat([test_fulldata[i][ch].rename(i) for i in tc if ch in test_fulldata[i].columns],axis=1)
+            else:
+                concat_to_df = pd.concat([test_fulldata[i][ch].rename(i) for i in tc if ch in test_fulldata[i].columns],axis=1)
+                fulldata[ch] = pd.concat([fulldata[ch],concat_to_df],axis=1)
+        t = test_fulldata[tc[0]].iloc[:4100,0].round(4)
     return t, fulldata
 
 def initialize(directory,channels,cutoff,tc=None,query=None,filt=None,drop=None):

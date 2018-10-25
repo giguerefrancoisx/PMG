@@ -19,3 +19,8 @@ def r2(x,y):
     lr.fit(x.values.reshape(-1,1),y.values.reshape(-1,1))
     r2 = lr.score(x.values.reshape(-1,1),y.values.reshape(-1,1))   
     return r2
+
+def query_list(dataframe,column,qlist):
+    # queries a dataframe by whether column contains qlist 
+    return dataframe[dataframe[column].isin(qlist)]
+    
