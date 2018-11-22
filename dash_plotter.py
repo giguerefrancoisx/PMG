@@ -74,9 +74,7 @@ def update_figure(tc,ch,tc2,ch2):
                             'showlegend': True}}
     
     #if no search in either fields, plot nothing
-    #if [tc,ch]==[None,None] and [tc2,ch2]==[None,None]
     if (tc in [' ', None] or ch in [' ', None]) and (tc2 in [' ', None] or ch2 in [' ', None]):
-#    if not(tc!=' ' and ch!=' ') and not(tc2!=' ' and ch2!=' '):
         new_graph['data'].append({'x': [], 'y': []})
         return new_graph
     

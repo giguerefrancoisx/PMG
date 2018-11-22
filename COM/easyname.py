@@ -5,31 +5,25 @@ Created on Fri Jul 13 09:27:54 2018
 @author: tangk
 """
 
-# only for sled 3ms clips
-def inverse_rename(name,pos):
-    if name==name.split(" "):
-        name = name.split(".")
+def get_units(channel_name):
+    if 'FO' in channel_name:
+        return 'Force [N]'
+    elif 'AC' in channel_name:
+        return 'Acceleration [g]'
+    elif 'Excursion' in channel_name:
+        return 'Excursion [mm]'
+    elif '3ms' in channel_name:
+        return 'Acceleration [g]'
+    elif 'DS' in channel_name:
+        return 'Deflection [mm]'
+    elif '_x' in channel_name: 
+        return 'Displacement [mm]'
+    elif '_y' in channel_name:
+        return 'Displacement [mm]'
+    elif 'MO' in channel_name:
+        return 'Moment [Nm]'
     else:
-        name = name.split(" ")
-
-    if name[0]=='Head':
-        name1 = 'HEAD'
-    elif name[0]=='Chest' and ('Ac' in name[1]) or (name[1]=='3ms'):
-        name1 = 'CHST'
-    elif name[0]=='Pelvis':
-        name1 = 'PELV'
-    elif name[0]=='Femur':
-        name1 = 'FEMR'
-    elif name[0]=='Acetabulum':
-        name1 = 'ACTB'
-    elif name[0]=='NIJ':
-        name1 = 'NIJC'
-    elif name[0]=='HIC15':
-        name1=='HICR0015'
-    elif name[0]=='BRIC':
-        name1 = 'BRIC0000'
-    elif name[0]=='Tibia' and name[1]=='Index':
-        name1 = 'TIIN'
+        return ''
 
 #Rename channels to more legible names
 def renameISO(name):

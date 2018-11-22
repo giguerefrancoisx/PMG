@@ -23,4 +23,6 @@ def r2(x,y):
 def query_list(dataframe,column,qlist):
     # queries a dataframe by whether column contains qlist 
     return dataframe[dataframe[column].isin(qlist)]
+
+
     

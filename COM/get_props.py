@@ -183,6 +183,7 @@ def get_shifted(row):
     return row
 
 def get_angle(row):
+    # angle from the vertical 
     dx = np.abs(row['Up_x']-row['Down_x'])
     dy = np.abs(row['Up_y']-row['Down_y'])
     angle = np.degrees(np.arctan(dx/dy))

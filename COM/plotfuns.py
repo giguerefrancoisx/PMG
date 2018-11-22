@@ -9,7 +9,8 @@ Created on Wed Jan 17 12:30:52 2018
 import scipy.cluster.hierarchy as hier
 import matplotlib.pyplot as plt
 import numpy as np
-from plotly.offline import init_notebook_mode, plot
+from plotly.offline import plot
+import plotly.graph_objs as go
 
 # plot dendrogram
 def plot_dendrogram(links,models,mtc,mtd):
@@ -63,7 +64,7 @@ def plot_full_2(t,data1,data2):
                 continue
             else:
                 ax.plot(t,data2[i])
-                ax.set_title(files2[i])    
+                ax.set_title(files2[i])  
 
 # bar plot
 # to do: expand to plot variable number of inputs

@@ -58,6 +58,9 @@ def names_to_se(table,names):
     for n in names.keys():
         out[n] = list(table.query(names[n]).index)
     return out
+
+def re_cutoff(chdata,cutoff):
+    return chdata.applymap(lambda x: x[cutoff])
     
 # data is a dataframe
 def arrange_by_peak(data):
