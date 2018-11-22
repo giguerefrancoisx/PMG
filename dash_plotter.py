@@ -10,7 +10,32 @@ Plot things interactively using Dash
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from PMG.read_data import get_test, get_test_info
+import h5py
+
+def get_test(tc,channel):
+    # this function is only for retrieving tests stored in P:/Data Analysis/Data
+    # only reads one tc and one channel at a time. 
+    # returns time and data from one channel and one tc
+    tc = '/' + tc.replace('-','N')
+    channel = 'X' + channel
+      
+#    with pd.HDFStore('P:\\Data Analysis\\Test\\Tests.h5', mode='r+') as test:
+    with h5py.File('P:\\Data Analysis\\Data\\' + tc[1:3] + '\\Tests.h5','r') as test:
+        if channel in test[tc].dtype.names:
+            t = test[tc]['XT_10000_0']
+            x = test[tc][channel]
+        else:
+            t = None
+            x = None 
+    
+    return t, x
+
+def get_test_info():
+    directory = 'P:\\Data Analysis\\Data\\'
+    test_names = pd.read_csv(directory + 'test_names.csv',header=None)
+    channel_names = pd.read_csv(directory + 'channel_names.csv',header=None)
+    return np.concatenate(test_names.values), np.concatenate(channel_names.values)
+
 
 tests, channels = get_test_info()
 tests.sort()
