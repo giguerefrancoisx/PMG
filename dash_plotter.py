@@ -6,7 +6,8 @@ test dash
 Plot things interactively using Dash
 
 """
-
+import numpy as np
+import pandas as pd
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -14,11 +15,11 @@ import h5py
 
 def get_test(tc,channel):
     # this function is only for retrieving tests stored in P:/Data Analysis/Data
-    # only reads one tc and one channel at a time. 
+    # only reads one tc and one channel at a time.
     # returns time and data from one channel and one tc
     tc = '/' + tc.replace('-','N')
     channel = 'X' + channel
-      
+
 #    with pd.HDFStore('P:\\Data Analysis\\Test\\Tests.h5', mode='r+') as test:
     with h5py.File('P:\\Data Analysis\\Data\\' + tc[1:3] + '\\Tests.h5','r') as test:
         if channel in test[tc].dtype.names:
@@ -26,8 +27,8 @@ def get_test(tc,channel):
             x = test[tc][channel]
         else:
             t = None
-            x = None 
-    
+            x = None
+
     return t, x
 
 def get_test_info():
@@ -59,13 +60,13 @@ app.layout = html.Div(children=[
         },
         style={'height': '750'}
     ),
-    
+
     html.Div([
     html.Div(dcc.Dropdown(id = 'tc_entry',
                  options = [{'label': i, 'value': i} for i in tests],
                  value=' '),
             style = {'width': '48%', 'display': 'inline-block'}),
-                 
+
     html.Div(dcc.Dropdown(id = 'ch_entry',
                  options = [{'label': i, 'value': i} for i in channels],
                  value=' '),
@@ -75,7 +76,7 @@ app.layout = html.Div(children=[
                  options = [{'label': i, 'value': i} for i in tests],
                  value=' '),
             style = {'width': '48%', 'display': 'inline-block'}),
-                 
+
     html.Div(dcc.Dropdown(id = 'ch_entry_2',
                  options = [{'label': i, 'value': i} for i in channels],
                  value=' '),
@@ -84,6 +85,64 @@ app.layout = html.Div(children=[
 ])
 
 
+@app.callback(
+    dash.dependencies.Output('ch_entry', 'options'),
+    [dash.dependencies.Input('tc_entry', 'value')]
+)
+def update_ch_dropdown(tc):
+
+#    if tc == 'TC18-129':
+#        updated_channels = ['10CVEHCG0000ACXD','10CVEHCG0000ACYD','10CVEHCG0000ACZD']
+#    else:
+#        updated_channels = channels
+    if 'SE' in tc:
+        child = 'SE\\'
+    else:
+        child = 'TC\\'
+    directory = 'P:\\Data Analysis\\Data\\'+ child
+    try:
+        with h5py.File(directory+'Tests.h5','r') as test_store:
+            data = test_store[tc.replace('-','N')]
+            dataframe = pd.DataFrame(data[:],columns=data.dtype.names)
+            updated_channels = [ch.replace('X','') for ch in dataframe.columns]
+            updated_channels.sort()
+    except:
+        updated_channels = channels
+
+    return [{'label': i, 'value': i} for i in updated_channels]
+
+@app.callback(
+    dash.dependencies.Output('ch_entry_2', 'options'),
+    [dash.dependencies.Input('tc_entry_2', 'value')]
+)
+def update_ch_dropdown_2(tc):
+    if 'SE' in tc:
+        child = 'SE\\'
+    else:
+        child = 'TC\\'
+    directory = 'P:\\Data Analysis\\Data\\'+ child
+    try:
+        with h5py.File(directory+'Tests.h5','r') as test_store:
+            data = test_store[tc.replace('-','N')]
+            dataframe = pd.DataFrame(data[:],columns=data.dtype.names)
+            updated_channels = [ch.replace('X','') for ch in dataframe.columns]
+            updated_channels.sort()
+    except:
+        updated_channels = channels
+
+    return [{'label': i, 'value': i} for i in updated_channels]
+
+#@app.callback(
+#    dash.dependencies.Output('tc_entry', 'options'),
+#    [dash.dependencies.Input('ch_entry', 'value')]
+#)
+#def update_tc_dropdown(ch):
+#    #replace with 'get tc from channels' function
+#    if ch == '10CVEHCG0000ACXD':
+#        updated_tests = ['TC18-123','TC18-124','TC18-129']
+#    else:
+#        updated_tests = tests
+#    return [{'label': i, 'value': i} for i in updated_tests]
 
 @app.callback(
         dash.dependencies.Output(component_id='time_series',component_property='figure'),
@@ -97,12 +156,12 @@ def update_figure(tc,ch,tc2,ch2):
                  'layout': {'title'     : ' ',
                             'titlefont' : {'size': 20},
                             'showlegend': True}}
-    
+
     #if no search in either fields, plot nothing
     if (tc in [' ', None] or ch in [' ', None]) and (tc2 in [' ', None] or ch2 in [' ', None]):
         new_graph['data'].append({'x': [], 'y': []})
         return new_graph
-    
+
     # if first fields are not empty, then add to plot
     if not(tc in [' ', None]) and not(ch in [' ', None]):
         t, x = get_test(tc, ch)
@@ -112,7 +171,7 @@ def update_figure(tc,ch,tc2,ch2):
             new_graph['data'].append({'x': t, 'y': x, 'name': tc + ',' + ch, 'mode': 'markers','line': {'color': '#182952'}})
         else:
             new_graph['data'].append({'x': t, 'y': x, 'name': tc + ',' + ch,'line': {'color': '#182952'}})
-    
+
     # if second fields are not empty, then add to plot
     if not(tc2 in [' ', None]) and not(ch2 in [' ', None]):
         t2, x2 = get_test(tc2,ch2)
@@ -126,4 +185,7 @@ def update_figure(tc,ch,tc2,ch2):
     return new_graph
 
 if __name__=='__main__':
+    import webbrowser
+    webbrowser.open('http://127.0.0.1:8050/', new=2)
     app.run_server()
+
