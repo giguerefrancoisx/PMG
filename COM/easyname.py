@@ -6,6 +6,8 @@ Created on Fri Jul 13 09:27:54 2018
 """
 
 def get_units(channel_name):
+    if 'Tmin' in channel_name or 'Tmax' in channel_name:
+        return 'Time [s]'
     if 'FO' in channel_name:
         return 'Force [N]'
     elif 'AC' in channel_name:
@@ -22,8 +24,18 @@ def get_units(channel_name):
         return 'Displacement [mm]'
     elif 'MO' in channel_name:
         return 'Moment [Nm]'
+    elif 'Angle' in channel_name:
+        return 'Angle [deg]'
     else:
-        return ''
+        return channel_name
+    
+def rename(ch,names={}):
+    """renames channel using names
+    names is a dict of {names: replacement names}"""
+    if ch in names:
+        return names[ch]
+    else:
+        return ch
 
 #Rename channels to more legible names
 def renameISO(name):
