@@ -36,6 +36,7 @@ channels = ['S0SLED000000ACXD',
             '12CHST0000Y7ACRC',
             '12CHST0000Y7DSXB',
             '12LUSP0000Y7FOXA',
+            '12LUSP0000Y7FOYA',
             '12LUSP0000Y7FOZA',
             '12LUSP0000Y7MOXA',
             '12LUSP0000Y7MOYA',
@@ -90,7 +91,6 @@ chdata.at['SE16-0338_2','12CHST0000Y7DSXB'] = -chdata.at['SE16-0338_2','12CHST00
 
 #%% preprocessing
 append.append((chdata['12CHST0000Y7ACXC']-chdata['12PELV0000Y7ACXA'].apply(smooth_data)).rename('Chest-Pelvis'))
-append.append(chdata['12CHST0000Y7DSXB'].apply(lambda x: x[:800]).rename('12CHST0000Y7DSXB_trunc'))
 
 #%% append columns and replace nan with array of nan
 chdata = pd.concat(append,axis=1)
@@ -123,6 +123,16 @@ def get_all_features(csv_write=False,json_write=False):
     # get sled acceleration at peak chest Acx
     sled_at_peak_chest = get_x_at_y(chdata['S0SLED000000ACXD'], chdata['12CHST0000Y7ACXC'].apply(get_argmin))
     append.append(sled_at_peak_chest.rename('S0SLED000000ACXD_at_12CHST0000Y7ACXC'))
+    
+    #sled at peak chest acr
+    sled_at_peak_chest = get_x_at_y(chdata['S0SLED000000ACXD'], chdata['12CHST0000Y7ACRC'].apply(get_argmax))
+    append.append(sled_at_peak_chest.rename('S0SLED000000ACXD_at_12CHST0000Y7ACRC'))
+    
+    chest_pelvis_at_chest_dx = get_x_at_y(chdata['Chest-Pelvis'], chdata['12CHST0000Y7DSXB'].apply(get_argmin))
+    append.append(chest_pelvis_at_chest_dx.rename('Chest-Pelvis_at_12CHST0000Y7DSXB'))
+    
+    chest_pelvis_at_chest = get_x_at_y(chdata['Chest-Pelvis'], chdata['12CHST0000Y7ACRC'].apply(get_argmax))
+    append.append(chest_pelvis_at_chest.rename('Chest-Pelvis_at_12CHST0000Y7ACRC'))
     
     # get time between onset and peak angle
     append.append((se_angles.apply(get_argmax)-se_angles.apply(get_onset_to_max)).rename('TRise_Angle'))

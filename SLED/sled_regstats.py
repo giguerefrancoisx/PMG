@@ -7,6 +7,7 @@ Created on Tue Apr 17 09:44:50 2018
 import pandas as pd
 import numpy as np
 import copy
+import re
 import matplotlib.pyplot as plt
 from PMG.COM.plotfuns import *
 from PMG.COM.easyname import get_units, rename
@@ -16,6 +17,8 @@ import json
 from PMG.SLED.sled_initialize import table, t, chdata, angle_t, get_all_features
 from PMG.SLED.sled_helper import *
 from functools import partial
+import lightgbm as lgb
+import glob
 
 directory = 'P:\\Data Analysis\\Projects\\SLED\\'
 #%% plotting params
@@ -33,6 +36,73 @@ install_order = {'Y7': ['H1','H3','HB','LB'],
 #%%
 features = get_all_features(csv_write=False,json_write=False)
 
+#%%
+#chdata = chdata.drop(['Angle','DUp_x','DUp_y','DDown_x','DDown_y'], axis=1)
+chdata = chdata.chdata.re_cutoff(range(400))
+features = get_all_features(csv_write=False,json_write=False)
+#%%
+lgb_drop = ['Min_S0SLED000000ACXD',
+            'Tmin_S0SLED000000ACXD',
+            'Max_12HEAD0000Y7ACXA',
+            'Tmax_12HEAD0000Y7ACXA',
+            'Min_12HEAD0000Y7ACZA',
+            'Tmin_12HEAD0000Y7ACZA',
+            'Min_12HEAD0000Y7ACRA',
+            'Tmin_12HEAD0000Y7ACRA',
+            'Max_12NECKUP00Y7FOXA',
+            'Tmax_12NECKUP00Y7FOXA',
+            'Min_12NECKUP00Y7FORA',
+            'Tmin_12NECKUP00Y7FORA',
+            'Max_12CHST0000Y7ACXC',
+            'Tmax_12CHST0000Y7ACXC',
+            'Max_12CHST0000Y7ACZC',
+            'Tmax_12CHST0000Y7ACZC',
+            'Min_12CHST0000Y7ACRC',
+            'Tmin_12CHST0000Y7ACRC',
+            'Max_12CHST0000Y7DSXB',
+            'Tmax_12CHST0000Y7DSXB',
+            'Max_12LUSP0000Y7FOXA',
+            'Tmax_12LUSP0000Y7FOXA',
+            'Max_12PELV0000Y7ACXA',
+            'Tmax_12PELV0000Y7ACXA',
+            'Max_12PELV0000Y7ACZA',
+            'Tmax_12PELV0000Y7ACZA',
+            'Min_12PELV0000Y7ACRA',
+            'Tmin_12PELV0000Y7ACRA',
+            'Min_12SEBE0000B3FO0D',
+            'Tmin_12SEBE0000B3FO0D',
+            'Min_12SEBE0000B6FO0D',
+            'Tmin_12SEBE0000B6FO0D',
+            'X12CHST0000Y7ACXC_at_12CHST0000Y7ACRC',
+            'X12HEAD0000Y7ACZA_at_12HEAD0000Y7ACRA',
+            'Min_12LUSP0000Y7FOXA']
+
+lgb_drop2 = ['Head_Excursion',
+             'Knee_Excursion',
+             'Head_3ms',
+             'Chest_3ms',
+             'Min_12CHST0000Y7DSXB_trunc']
+
+lgb_drop = lgb_drop + lgb_drop2
+
+x = (features.loc[table.query('DUMMY==\'Y7\'').table.query_list('INSTALL',['HB','LB']).index]
+             .drop(lgb_drop,axis=1)
+             .dropna(axis=1,how='all'))
+y = x.pop('Min_12CHST0000Y7DSXB')
+
+train_data = lgb.Dataset(x, label=y)
+
+param = {'objective': 'regression',
+         'bagging_fraction': 0.8}
+
+n_rounds = 10
+importance = pd.DataFrame(index=range(n_rounds), columns=x.columns)
+
+for i in range(n_rounds):
+    model = lgb.train(param, train_data)
+    importance.loc[i] = model.feature_importance()
+#    lgb.plot_importance(model, figsize=(10,8))
+print(importance.mean().sort_values())
 #%% get tmin_chest - tmin_pelvis
 features['Tmin_12CHST0000Y7ACXC-12PELV0000Y7ACXA'] = features['Tmin_12CHST0000Y7ACXC']-features['Tmin_12PELV0000Y7ACXA']
 se_neg = features['Tmin_12CHST0000Y7ACXC-12PELV0000Y7ACXA']<0
@@ -152,7 +222,8 @@ plot_channels = ['Max_12SEBE0000B3FO0D',
                  'X12CHST0000Y2ACZC_at_12CHST0000Y2ACRC',
                  'X12HEAD0000Y2ACXA_at_12HEAD0000Y2ACRA',
                  'X12HEAD0000Y2ACZA_at_12HEAD0000Y2ACRA',
-                 'Tmin_DDown_y']
+                 'Tmin_DDown_y',
+                 'Tmax_Angle']
 
 grouped = table.groupby(['DUMMY'])
 for d in dummies:
@@ -189,6 +260,18 @@ for d in dummies:
             plt.show()
             plt.close(fig)
 
+#%% bar plots model by model
+plot_channels = ['X12CHST0000Y2ACXC_at_12CHST0000Y2ACRC',
+                 'X12CHST0000Y2ACZC_at_12CHST0000Y2ACRC']
+subset = (table.query('INSTALL==\'C1\'')
+                .table.query_list('SLED',['new_accel','new_decel']))
+
+for ch in plot_channels:
+    x = arrange_by_group(subset, features[ch], 'SLED','MODEL')
+    fig, ax = plt.subplots()
+    ax = plot_bar(ax, x, plot_specs=plot_specs)
+    ax = set_labels(ax, {'title': rename(ch), 'ylabel': get_units(ch)})
+    ax = adjust_font_sizes(ax, {'ticklabels': 16, 'title': 20, 'axlabels': 18})
 #%% plot ranges of differences
 plot_channels = ['Head 3ms','Chest 3ms','Head Excursion','Knee Excursion']
 for c in comparison:
@@ -273,28 +356,34 @@ for c in comparison:
         
 #%% TIME SERIES OVERLAYS
 #%% plot overlays model-by-model
-plot_channels = ['12SEBE0000B6FO0D']
-grouped = (table.table.query_list('INSTALL',['LB'])
+plot_channels = ['12CHST0000Y7ACYC',
+                '12LUSP0000Y7FOYA',
+                '12LUSP0000Y7MOXA',
+                '12LUSP0000Y7MOZA']
+grouped = (table.table.query_list('INSTALL',['HB','LB'])
                 .table.query_list('SLED',['new_accel', 'new_decel'])
-#                .table.query_list('MODEL',['Evenflo Embrace  CRABI','Cybex Aton Q', 'SNUGRIDE CRABI'])
-                .groupby(['INSTALL','MODEL']))
+#                .table.query_list('MODEL',['PRONTO HIII-6-YR'])
+                .groupby(['MODEL', 'INSTALL']))
 for ch in plot_channels:
     for subset in grouped:
         x = arrange_by_group(subset[1], chdata[ch], 'SLED')
         if len(x)==0: continue
         fig, ax = plt.subplots()
         ax = plot_overlay(ax, t, x, line_specs=plot_specs)
+#        ax.plot(t, chdata.at['SE16-0337',ch], color='#00FFFF', linewidth=1.5, linestyle='--', label='Pronto high')
+#        ax.plot(t, chdata.at['SE16-0338',ch], color='#FF00FF', linewidth=1, linestyle='--', label='Pronto low')
         ax = set_labels(ax, {'title': ch + '\n' + str(subset[0]), 'legend': {'bbox_to_anchor': (1,1)}})
         plt.show()
         plt.close(fig)     
 
 #%% plot multiple channels on the same axis
-plot_channels = ['12CHST0000Y7ACXC',
-                 '12PELV0000Y7ACXA']
-grouped = (table.query('DUMMY==\'Y7\'')
+plot_channels = ['12CHST0000Y2ACXC',
+                 '12CHST0000Y2ACZC',
+                 '12CHST0000Y2ACRC']
+grouped = (table.query('DUMMY==\'Y2\'')
                 .table.query_list('SLED',['new_accel','new_decel'])
-#                .table.query_list('MODEL',models)
-#                .table.query_list('INSTALL',['C1'])
+#                .table.query_list('MODEL',['PRONTO HIII-6-YR'])
+                .table.query_list('INSTALL',['C1'])
                 .groupby(['INSTALL','MODEL','SLED']))
 for grp in grouped:
     fig, ax = plt.subplots()
@@ -459,14 +548,12 @@ for grp in grouped:
 
 #%% REGRESSION
 #%% regression
-ch0_list = ['TRise_Angle',
-            'Max_Angle',
-            'TDDown_y-Angle',
-            'Min_DDown_x']
+ch0_list = ['TDDown_y-Angle']
 plot_channels = ['Chest_3ms']
 
 subset = (table.query('DUMMY==\'Y2\'')
                .drop(['SE16-0253','SE16-0257','SE16-0351', 'SE16-0364'])
+#               .table.query_list('MODEL',['PRONTO HIII-6-YR'])
                .table.query_list('INSTALL',['B11','B12'])
                .table.query_list('SLED',['new_accel','new_decel']))
 
@@ -487,7 +574,7 @@ for ch0 in ch0_list:
         match_groups(x,y)
         
         rsq = {k: float(corr(x[k], y[k])) for k in x}
-        if max(rsq.values()) < 0.3 and min(rsq.values())>-0.3: continue
+#        if max(rsq.values()) < 0.3 and min(rsq.values())>-0.3: continue
         renamed = {k: rename(k).replace('\n','') + ' R=' + str(rsq[k])[:5] for k in x}
         combined_rsq = corr(pd.concat([x[k] for k in x]),pd.concat([y[k] for k in y]))
         combined_rsq = str(combined_rsq)[:6] if combined_rsq<0 else str(combined_rsq)[:5]
@@ -499,9 +586,9 @@ for ch0 in ch0_list:
         rename_legend(ax, renamed)
         plt.show()
         
-#        plotly_fig = plot_scatter_with_labels(x,y)
-#        plot(plotly_fig)
-#        plt.close(fig)
+        plotly_fig = plot_scatter_with_labels(x,y)
+        plot(plotly_fig)
+        plt.close(fig)
 
 #%%
 preds = pd.read_csv(directory + 'predictions.csv',index_col=0)
@@ -511,24 +598,25 @@ y = {'pred': preds['pred'],
      'act': preds['act']}
 plotly_fig = plot_scatter_with_labels(x,y)
 plot(plotly_fig)
-#%% plot for each model the chest 3ms vs sled acceleration at peak chest g
-# filter the group to include only high-back booster seats on the new bench (i.e. exclude tests on old_accel)
-grouped = table.query('MODEL==\'PRONTO HIII-6-YR\' and SLED!=\'old_accel\'').groupby(['MODEL'])
 
-for grp in grouped:
-#    x = {'label1': features.loc[grp[1].index,'Tmax_12CHST0000Y7ACRC']}
-#    x = {'label1': features.loc[grp[1].index,'Max_12CHST0000Y7ACRC']}
-    x = {'label1': grp[1]['Head 3ms']}
-    y = {'label1': features.loc[grp[1].index, 'Sled_at_peak']}
-    fig, ax = plt.subplots()
-    ax = plot_scatter(ax,x,y,marker_specs={'label1': {'marker': 'o', 'color': 'k'}})
-    ax = set_labels(ax, {'title': grp[0], 'xlabel': 'Chest 3ms Clip [g]', 'ylabel': 'Sled Acceleration at\nPeak Chest AcR[g]'})
-    ax.set_title('')
-    ax = adjust_font_sizes(ax, {'ticklabels': 18, 'axlabels': 18, 'title': 20})
-    plt.show()
-    print('corr', corr(x['label1'],y['label1']))
-    print('rsq', r2(x['label1'],y['label1']))
+#%% plot faro
+faro_files = glob.glob(directory + 'Faro//*.csv')
+faro_points = {}
+trace = []
+for file in faro_files:
+    file_points = pd.read_csv(file)
+    se = re.search('SE\d{2}-\d{4}_{0,1}\d{0,1}',file).group()
+    faro_points[se] = file_points
+    t = go.Scatter3d(x=file_points['x'],
+                     y=file_points['y'],
+                     z=file_points['z'],
+                     text=file_points['point_definition_id'],
+                     name=se,
+                     mode='markers')
+    trace.append(t)
     
-    plotly_fig = plot_scatter_with_labels(x,y,marker_specs={'label1': {'marker': 'o', 'color': 'k'}})
-    plot(plotly_fig)
-
+layout = go.Layout(scene=dict(xaxis=axis_template,
+                              yaxis=axis_template,
+                              zaxis=axis_template))
+fig = go.Figure(data=trace, layout=layout)
+plot(fig)

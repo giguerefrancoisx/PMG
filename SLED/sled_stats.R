@@ -1,6 +1,6 @@
-setwd('C:/Users/tangk/Python/')
-source("read_data.R")
-source("helper.R")
+setwd('C:/Users/tangk/AppData/Local/Continuum/anaconda3/PMG/SLED')
+source("C:/Users/tangk/AppData/Local/Continuum/anaconda3/PMG/COM/read_data.R")
+source("C:/Users/tangk/AppData/Local/Continuum/anaconda3/PMG/COM/helper.R")
 library(lme4)
 library(jsonlite)
 
