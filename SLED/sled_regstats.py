@@ -37,10 +37,6 @@ install_order = {'Y7': ['H1','H3','HB','LB'],
 features = get_all_features(csv_write=False,json_write=False)
 
 #%%
-#chdata = chdata.drop(['Angle','DUp_x','DUp_y','DDown_x','DDown_y'], axis=1)
-chdata = chdata.chdata.re_cutoff(range(400))
-features = get_all_features(csv_write=False,json_write=False)
-#%%
 lgb_drop = ['Min_S0SLED000000ACXD',
             'Tmin_S0SLED000000ACXD',
             'Max_12HEAD0000Y7ACXA',
@@ -252,7 +248,7 @@ for d in dummies:
             
             # set labels and font sizes
             ax = set_labels(ax, {'title': rename(ch), 'ylabel': get_units(ch)})
-            ax = adjust_font_sizes(ax, {'ticklabels':16,'title':20,'ylabel':18})
+            ax = adjust_font_sizes(ax, {'ticklabels':20,'title':24,'ylabel':20})
 #            ax.legend(ncol=2,bbox_to_anchor=(1,1))
 #            ax = adjust_font_sizes(ax, {'ticklabels':16,'title':20,'legend':18,'ylabel':18})
             ax.set_ylim([0, 1.2*max(y)])
@@ -262,7 +258,8 @@ for d in dummies:
 
 #%% bar plots model by model
 plot_channels = ['X12CHST0000Y2ACXC_at_12CHST0000Y2ACRC',
-                 'X12CHST0000Y2ACZC_at_12CHST0000Y2ACRC']
+                 'X12CHST0000Y2ACZC_at_12CHST0000Y2ACRC',
+                 'TDDown_y-Angle']
 subset = (table.query('INSTALL==\'C1\'')
                 .table.query_list('SLED',['new_accel','new_decel']))
 
@@ -381,10 +378,10 @@ plot_channels = ['12CHST0000Y2ACXC',
                  '12CHST0000Y2ACZC',
                  '12CHST0000Y2ACRC']
 grouped = (table.query('DUMMY==\'Y2\'')
-                .table.query_list('SLED',['new_accel','new_decel'])
-#                .table.query_list('MODEL',['PRONTO HIII-6-YR'])
-                .table.query_list('INSTALL',['C1'])
-                .groupby(['INSTALL','MODEL','SLED']))
+                .table.query_list('SLED',['old_accel','new_accel'])
+#                .table.query_list('MODEL',models)
+                .table.query_list('INSTALL',['B11','B12'])
+                .groupby(['INSTALL','SLED','MODEL']))
 for grp in grouped:
     fig, ax = plt.subplots()
     for ch in plot_channels:
@@ -548,14 +545,14 @@ for grp in grouped:
 
 #%% REGRESSION
 #%% regression
-ch0_list = ['TDDown_y-Angle']
-plot_channels = ['Chest_3ms']
+ch0_list = ['Max_12LUSP0000Y7MOZA']
+plot_channels = ['Max_12NECKUP00Y7FOZA']
 
-subset = (table.query('DUMMY==\'Y2\'')
-               .drop(['SE16-0253','SE16-0257','SE16-0351', 'SE16-0364'])
+subset = (table.query('DUMMY==\'Y7\'')
+#               .drop(['SE16-0253','SE16-0257','SE16-0351', 'SE16-0364'])
 #               .table.query_list('MODEL',['PRONTO HIII-6-YR'])
-               .table.query_list('INSTALL',['B11','B12'])
-               .table.query_list('SLED',['new_accel','new_decel']))
+               .table.query_list('INSTALL',['HB','LB']))
+#               .table.query_list('SLED',['new_accel','new_decel','old_accel']))
 
 #ch0_list = [i for i in features.columns if 'SEBE' not in i]
 #plot_channels = ['Min_12CHST0000Y7DSXB']
@@ -586,9 +583,9 @@ for ch0 in ch0_list:
         rename_legend(ax, renamed)
         plt.show()
         
-        plotly_fig = plot_scatter_with_labels(x,y)
-        plot(plotly_fig)
-        plt.close(fig)
+#        plotly_fig = plot_scatter_with_labels(x,y)
+#        plot(plotly_fig)
+#        plt.close(fig)
 
 #%%
 preds = pd.read_csv(directory + 'predictions.csv',index_col=0)

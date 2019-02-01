@@ -9,7 +9,7 @@ import numpy as np
 from PMG.COM.helper import *
 
 #%% rearranging things     
-def to_chdata(data, cutoff):
+def to_chdata(data, cutoff=None):
     """ returns data in the format of chdata
     chdata is a dataframe of size (n_tests, n_channels)
     each element is an array-type of the time series or is nan
@@ -19,10 +19,14 @@ def to_chdata(data, cutoff):
     
     # initialize: columns are the keys of dict
     chdata = pd.DataFrame(index=get_unique(data), columns=data.keys())
-    nan_list = [np.tile(np.nan,len(cutoff))]
+    if cutoff:
+        nan_list = [np.tile(np.nan,len(cutoff))]
     
     # populate each column with data
     for col in chdata.columns:
+        if not cutoff:
+            cutoff = range(data[col].shape[0])
+            nan_list = [np.tile(np.nan,len(cutoff))]
         chdata.loc[data[col].columns, col] = data[col].apply(lambda x: tuple(x.loc[cutoff])).apply(np.array)
         chdata.loc[chdata.index.drop(data[col].columns), col] = nan_list
         

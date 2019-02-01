@@ -14,8 +14,6 @@ from PMG.COM.dfxtend import *
 from PMG.COM.helper import ordered_intersect
 # reads data and returns dictionary 
 
-
-
 def read_table(file):
     """Reads a csv file and uses SE or TC column as the index"""
     table = pd.read_csv(file)
@@ -48,12 +46,16 @@ def read_from_common_store(tc,channels,verbose=False):
                     print('Retrieving ' + i)
                 header = test_store[i.replace('-','N')].dtype.names
                 colnames = tuple(ordered_intersect(map(lambda x: 'X'+x, channels), header))
-                if 'XT_10000_0' not in colnames:
-                    colnames = tuple(['XT_10000_0']) + colnames
-                tc_fulldata[i] = arrange.h5py_to_df(test_store[i.replace('-','N')][colnames]).rename(lambda x: x.lstrip('X'),axis=1)
+#                if 'XT_10000_0' not in colnames:
+#                    colnames = tuple(['XT_10000_0']) + colnames
+                if len(colnames)==1:
+                    tc_fulldata[i] = pd.DataFrame(test_store[i.replace('-','N')][colnames], columns=[colnames[0][1:]])
+                else:
+                    tc_fulldata[i] = arrange.h5py_to_df(test_store[i.replace('-','N')][colnames]).rename(lambda x: x.lstrip('X'),axis=1)
         for ch in channels:
-            ch_fulldata[ch] = pd.DataFrame.from_dict({i: tc_fulldata[i][ch] for i in tc if ch in tc_fulldata[i]})                
-    t = tc_fulldata[tc[0]].loc[:4100,'T_10000_0'].round(4)
+            ch_fulldata[ch] = pd.DataFrame.from_dict({i: tc_fulldata[i][ch] for i in tc if ch in tc_fulldata[i]}) 
+    t = np.arange(-0.01, 0.3999, 0.0001).round(4)
+#    t = tc_fulldata[tc[0]].loc[:4100,'T_10000_0'].round(4)
     return t, ch_fulldata
 
 
@@ -100,8 +102,7 @@ def initialize(directory,channels,cutoff,tc=[],query=None,query_list=[],filt=Non
         t, fulldata = openHDF5(directory + 'Data\\', channels = channels)
         
     chdata = arrange.to_chdata(fulldata,cutoff).filter(items=tc,axis=0)
-    t = t.get_values()[cutoff]
-    chdata.chdata.t = t
+    t = t[cutoff]
         
     return table, t, chdata
 
@@ -112,11 +113,14 @@ def get_test(tc,channel):
     channel = 'X' + channel
 
     with h5py.File('P:\\Data Analysis\\Data\\' + tc[1:3] + '\\Tests.h5','r') as test:
-        if channel in test[tc].dtype.names:
+        if 'XT_10000_0' in test[tc].dtype.names:
             t = test[tc]['XT_10000_0']
+        else:
+            t = np.arange(-0.01, 0.3999, 0.0001).round(4)
+        
+        if channel in test[tc].dtype.names:
             x = test[tc][channel]
         else:
-            t = None
             x = None 
     
     return t, x
