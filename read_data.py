@@ -23,6 +23,8 @@ def read_table(file):
         table = table.set_index('TC',drop=True)
     return table
 
+def reread_table(directory):
+    return read_table(directory + 'Table.csv')
 
 def read_from_common_store(tc,channels,verbose=False):
     """Reads TCs and SEs from the P:\Data Analysis\Data directory

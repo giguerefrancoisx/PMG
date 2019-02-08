@@ -268,7 +268,10 @@ def plot_overlay(ax,t,x,line_specs={}):
         for i in x[k]:
             if np.isnan(i).all():
                 continue
-            line = ax.plot(t, i, alpha=0.5, label=k, **line_specs[k])
+            if 'alpha' not in line_specs[k]:
+                line = ax.plot(t, i, alpha=0.5, label=k, **line_specs[k])
+            else:
+                line = ax.plot(t, i, label=k, **line_specs[k])
             assign_missing_colours(line_specs,k,line[-1])
     return ax
 

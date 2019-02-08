@@ -78,11 +78,11 @@ def get_bounds(x):
     return np.min(x), np.max(x)
 
 def compare_two(x,y,lb,ub,method='diff',kernel_size=1):
-"""compare two time series x and y according to method and with bounds lb and ub, 
-   then apply a median filter of size kernel_size"""
-   di = np.logical_or(get_diff(x,y,lb,ub,method=method),get_diff(y,x,lb,ub,method=method))
-   di = medfilt(di,kernel_size=kernel_size).astype(bool)
-   return di
+    """compare two time series x and y according to method and with bounds lb 
+    and ub, then apply a median filter of size kernel_size"""
+    di = np.logical_or(get_diff(x,y,lb,ub,method=method),get_diff(y,x,lb,ub,method=method))
+    di = medfilt(di,kernel_size=kernel_size).astype(bool)
+    return di
 
 def estimate_ts_variance(chdata,tclist=None,channels=None,n=1,method='diff',bounds='pctile'):
     """ Estimates upper and lower bounds of how large a step size must be for 

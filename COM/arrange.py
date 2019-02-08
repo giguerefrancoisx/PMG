@@ -27,6 +27,9 @@ def to_chdata(data, cutoff=None):
         if not cutoff:
             cutoff = range(data[col].shape[0])
             nan_list = [np.tile(np.nan,len(cutoff))]
+        # if there is only one value, put it at the beginning of the range so it won't be cut off
+        if data[col].replace(0,np.nan).dropna(axis=0,how='all').shape[0]==1: 
+            data[col].loc[cutoff[0]] = data[col].loc[0]
         chdata.loc[data[col].columns, col] = data[col].apply(lambda x: tuple(x.loc[cutoff])).apply(np.array)
         chdata.loc[chdata.index.drop(data[col].columns), col] = nan_list
         

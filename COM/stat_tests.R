@@ -73,7 +73,7 @@ two.sample.byname <- function(x,y,test,paired=FALSE,args=NULL,vector.form=TRUE){
 	nx <- dim(x)[1]
 	ny <- dim(y)[1]
 	
-	res <- apply(rbind(x,y),2,(function(j) two.sample.test(j[1:nx],j[(nx+1):(nx+ny)],test,paired=paired,args=args)))
+	res <- apply(rbind(x,y),2,function(j) two.sample.test(j[1:nx],j[(nx+1):(nx+ny)],test,paired=paired,args=args))
 
 	testname <- as.character(res[1,1])
 	alpha <- as.numeric(as.character(res[5,1]))
