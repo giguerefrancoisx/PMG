@@ -184,17 +184,23 @@ for d in dummies:
             plt.close(fig)
 
 #%% bar plots model by model
-plot_channels = ['X12CHST0000Y2ACXC_at_12CHST0000Y2ACRC',
-                 'X12CHST0000Y2ACZC_at_12CHST0000Y2ACRC']
-subset = (table.query('INSTALL==\'C1\'')
-                .table.query_list('SLED',['new_accel','new_decel']))
+plot_channels = ['Min_DUp_x',
+                 'Min_DDown_x',
+                 'Min_DUp_y',
+                 'Min_DDown_y',
+                 'Min_Down_y']
+subset = (table.table.query_list('MODEL', models)
+                .table.query_list('SLED',['old_accel'])
+                .table.query_list('INSTALL',['B11','B12']))
 subset['MODEL'] = subset['MODEL'].replace(names)
 
 for ch in plot_channels:
-    x = arrange_by_group(subset, features[ch], 'SLED','MODEL')
+    x = arrange_by_group(subset, features[ch], 'INSTALL','MODEL')
+    print(ch)
+    print(x)
     fig, ax = plt.subplots()
     ax = plot_bar(ax, x, plot_specs=plot_specs)
-    ax = set_labels(ax, {'title': rename(ch), 'ylabel': get_units(ch)})
+    ax = set_labels(ax, {'title': rename(ch), 'ylabel': get_units(ch), 'legend': {'bbox_to_anchor': (1,1)}})
     ax = adjust_font_sizes(ax, {'ticklabels': 20, 'title': 24, 'axlabels': 20})
 #%% plot ranges of differences
 plot_channels = ['Head 3ms','Chest 3ms','Head Excursion','Knee Excursion']
@@ -257,17 +263,18 @@ for c in comparison:
         
 #%% TIME SERIES OVERLAYS
 #%% plot overlays model-by-model
-plot_channels = ['S0SLED000000ACXD']
+plot_channels = [ch for ch in chdata.columns if 'Y2' in ch]
 grouped = (table.drop('SE16-0338')
-                .table.query_list('INSTALL',['HB','LB'])
-                .table.query_list('SLED',['new_accel', 'new_decel'])
+                .table.query_list('INSTALL',['B11', 'B12'])
+                .table.query_list('MODEL',models)
+                .table.query_list('SLED',['old_accel'])
 #                .table.query_list('MODEL',['PRONTO HIII-6-YR'])
-                .groupby(['DUMMY']))
+                .groupby(['MODEL']))
 
 for ch in plot_channels:
     for subset in grouped:
         subset[1]['SLED'] = subset[1]['SLED'].replace(names)
-        x = arrange_by_group(subset[1], chdata[ch], 'SLED')
+        x = arrange_by_group(subset[1], chdata[ch], 'INSTALL')
         if len(x)==0: continue
         print(subset[0])
 #        line_specs = {rename(k): copy.deepcopy(plot_specs[k]) for k in plot_specs}
@@ -275,19 +282,19 @@ for ch in plot_channels:
 #        line_specs[rename('new_decel')]['alpha'] = 0.3
         fig, ax = plt.subplots()
         ax = plot_overlay(ax, t, x, line_specs=line_specs)
-        ax.plot(t, chdata.at['SE16-0338',ch], color='#ff00bf', linewidth=2, linestyle='--', label='Model F low')
+#        ax.plot(t, chdata.at['SE16-0338',ch], color='#ff00bf', linewidth=2, linestyle='--', label='Model F low')
         ax = set_labels(ax, {'title': rename(ch), 'xlabel': 'Time [s]', 'ylabel': get_units(ch), 'legend': {'bbox_to_anchor': (1,1)}})
         ax = adjust_font_sizes(ax,{'ticklabels': 20,'title': 24,'legend':20,'axlabels':20})
         plt.show()
         plt.close(fig)     
 
 #%% plot multiple channels on the same axis
-plot_channels = ['12CHST0000Y2ACXC',
-                 '12CHST0000Y2ACZC',
-                 '12CHST0000Y2ACRC']
+plot_channels = ['12HEAD0000Y2ACXA',
+                 '12HEAD0000Y2ACZA',
+                 '12HEAD0000Y2ACRA']
 grouped = (table.query('DUMMY==\'Y2\'')
-                .table.query_list('SLED',['old_accel','new_accel'])
-#                .table.query_list('MODEL',models)
+                .table.query_list('SLED',['old_accel'])
+                .table.query_list('MODEL',models)
                 .table.query_list('INSTALL',['B11','B12'])
                 .groupby(['INSTALL','SLED','MODEL']))
 for grp in grouped:
@@ -302,17 +309,17 @@ for grp in grouped:
 #    ax = set_labels(ax, {'title': rename(grp[0][0]).replace('\n','') + ', ' + rename(grp[0][2]), 'legend': {}, 'xlabel': 'Time [s]', 'ylabel': 'Acceleration [g]'})
     ax = set_labels(ax, {'title': grp[0], 'legend': {'bbox_to_anchor': (1,1)}, 'xlabel': 'Time [s]', 'ylabel': 'Acceleration [g]'})
     ax = adjust_font_sizes(ax,{'ticklabels':18, 'title':20, 'axlabels':18, 'legend':18})
-    ax.set_ylim([-35, 70])
+    ax.set_ylim([-35, 90])
     plt.show()
     plt.close(fig)
 #%% plot overlays of excursions vs. time comparing installations
-plot_channels = ['DDown_y',
-                 'DDown_x']
+plot_channels = ['Down_y',
+                 'Down_x']
 models = ['Evenflo Embrace  CRABI','SNUGRIDE CRABI','Cybex Aton Q']
-installs = ['B0']
 grouped = (table.query('DUMMY==\'Y2\'')
-#                .table.query_list('MODEL',models)
-                .table.query_list('INSTALL',installs)
+                .table.query_list('MODEL',models)
+                .table.query_list('INSTALL',['B11','B12'])
+                .query('SLED==\'old_accel\'')
                 .groupby(['MODEL']))
 line_specs = {'B11': {'linestyle': '-'},
               'B12': {'linestyle': '--'}}
@@ -322,8 +329,8 @@ for ch in plot_channels:
 #        for i in line_specs:
 #            line_specs[i]['color'] = plot_specs[grp[0][0]]['color']
         # x is time; y is ch 
-        x = arrange_by_group(grp[1], angle_t, 'SLED')
-        y = arrange_by_group(grp[1], chdata[ch], 'SLED')
+        x = arrange_by_group(grp[1], angle_t, 'INSTALL')
+        y = arrange_by_group(grp[1], chdata[ch], 'INSTALL')
         if x=={} or y=={}: continue 
         fig, ax = plt.subplots()
         ax = plot_overlay_2d(ax, x, y, line_specs=line_specs)
@@ -368,43 +375,27 @@ for grp in grouped:
     subset = grp[1].groupby('INSTALL').groups
     fig, ax = plt.subplots()
     for i in ['B11','B12']:
-        y = {j: -chdata.loc[subset[i], j]/10 for j in ['DUp_x','DUp_y','DDown_x','DDown_y']}
+#        y = {j: -chdata.loc[subset[i], j]/10 for j in ['DUp_x','DUp_y','DDown_x','DDown_y']}
+        y = {j: -chdata.loc[subset[i], j]/10 for j in ['DDown_x','DDown_y']}
         y['Angle'] = chdata.loc[subset[i], 'Angle']
-        x = {j: angle_t[subset[i]] for j in ['DUp_x','DUp_y','DDown_x','DDown_y','Angle']}
-        line_specs = {j: copy.deepcopy(plot_specs[i]) for j in ['DUp_x','DUp_y','DDown_x','DDown_y','Angle']}
-        line_specs['DUp_x']['color'] = '#03001e'
-        line_specs['DUp_y']['color'] = '#7303c0'
+#        x = {j: angle_t[subset[i]] for j in ['DUp_x','DUp_y','DDown_x','DDown_y','Angle']}
+        x = {j: angle_t[subset[i]] for j in ['DDown_x','DDown_y','Angle']}
+#        line_specs = {j: copy.deepcopy(plot_specs[i]) for j in ['DUp_x','DUp_y','DDown_x','DDown_y','Angle']}
+        line_specs = {j: copy.deepcopy(plot_specs[i]) for j in ['DDown_x','DDown_y','Angle']}
+#        line_specs['DUp_x']['color'] = '#03001e'
+#        line_specs['DUp_y']['color'] = '#7303c0'
         line_specs['DDown_x']['color'] = '#ec38bc'
         line_specs['DDown_y']['color'] = '#EF3B36'
         line_specs['Angle']['color'] = '#4286f4'
         ax = plot_overlay_2d(ax, x, y, line_specs = line_specs)
         
     ax.set_xticks(np.linspace(0,0.14,8))
-    ax.set_yticks(range(0,24,2))
+    ax.set_yticks(range(0,36,4))
     ax.axhline(1,color='k',linewidth=1)
     ax.legend(bbox_to_anchor=(1,1))
     ax.set_title(grp[0])
     plt.show()
-#%% 2D PLOTS
-#%% plot two channels in 2D
-plot_channels = ['12LUSP0000Y7MOXA',
-                 '12LUSP0000Y7MOZA']
-
-grouped = table.groupby('SLED')
-for c in comparison:
-    subset = pd.concat((grouped.get_group('new_accel'), grouped.get_group(c))).groupby(['DUMMY','INSTALL','MODEL'])
-    for grp in subset:
-        x = arrange_by_group(grp[1],chdata[plot_channels[0]],'SLED')
-        y = arrange_by_group(grp[1],chdata[plot_channels[1]],'SLED')
-        if x=={} or y=={}: continue
-        fig, ax = plt.subplots()
-        ax = plot_overlay_2d(ax, x, y, line_specs=plot_specs)
-        ax.axvline(0,color='k',linewidth=1)
-        ax.axhline(0,color='k',linewidth=1)
-        ax = set_labels({'title': grp[0], 'xlabel': plot_channels[0], 'ylabel': plot_channels[1], 'legend': {'bbox_to_anchor': (1,1)}})
-        plt.show()
-        plt.close(fig)
-        
+#%% 2D PLOTS        
 #%% plot seat trajectories in B11 and B12 installations
 models = ['Evenflo Embrace  CRABI','SNUGRIDE CRABI','Cybex Aton Q']
 installs = ['B11','B12']
@@ -416,24 +407,24 @@ for grp in grouped:
     for i in line_specs:
         line_specs[i]['color'] = plot_specs[grp[0][0]]['color']
         
-#    x = arrange_by_group(grp[1], -chdata['DDown_x'], 'INSTALL')
-#    y = arrange_by_group(grp[1], chdata['DDown_y'], 'INSTALL')
-    x2 = arrange_by_group(grp[1], -chdata['DUp_x'], 'INSTALL')
-    y2 = arrange_by_group(grp[1], chdata['DUp_y'], 'INSTALL')
+    x = arrange_by_group(grp[1], -chdata['Up_x'], 'INSTALL')
+    y = arrange_by_group(grp[1], chdata['Up_y'], 'INSTALL')
+#    x2 = arrange_by_group(grp[1], -chdata['DUp_x'], 'INSTALL')
+#    y2 = arrange_by_group(grp[1], chdata['DUp_y'], 'INSTALL')
 
     
 #    for z in x, y, x2, y2:
-    for z in x2, y2:
+    for z in x, y:
         z['Type 2 belt'] = z.pop('B11')
         z['UAS'] = z.pop('B12')
 
     if x=={} or y=={}: continue
     fig, ax = plt.subplots()
 #    ax = plot_overlay_2d(ax, x, y, line_specs=line_specs)
-    ax = plot_overlay_2d(ax, x2, y2, line_specs=line_specs)
+    ax = plot_overlay_2d(ax, x, y, line_specs=line_specs)
     ax = set_labels(ax, {'title': rename(grp[0][1]) + '\n(' + rename(grp[0][0]) + ')', 'xlabel': 'Excursion [mm]', 'ylabel': 'V. Displacement [mm]', 'legend': {}})
-    ax.set_xlim([0, 220])
-    ax.set_ylim([-220,0])
+#    ax.set_xlim([0, 220])
+#    ax.set_ylim([-220,0])
     ax = adjust_font_sizes(ax,{'ticklabels':20, 'title':24, 'axlabels':20, 'legend':20})
     ax.title.set_position([0.5, 1.05])
     plt.show()
@@ -441,28 +432,53 @@ for grp in grouped:
 #%% compare seat trajectories vs angle across benches/sleds
 grouped = (table.query('DUMMY==\'Y2\'')
                 .drop('SE16-0364')
-                .table.query_list('INSTALL',['B0','C1'])
-                .table.query_list('SLED',['new_accel','new_decel'])
-                .groupby(['MODEL','INSTALL']))
+                .table.query_list('MODEL',models)
+                .table.query_list('INSTALL',['B11','B12'])
+                .table.query_list('SLED',['old_accel'])
+                .groupby(['MODEL']))
 for grp in grouped:
-    dx = arrange_by_group(grp[1],chdata['Angle'],'SLED')
-    dy = arrange_by_group(grp[1],-chdata['DDown_x'],'SLED')
+    dx = arrange_by_group(grp[1],chdata['Angle'],'INSTALL')
+    dy = arrange_by_group(grp[1],-chdata['DUp_x'],'INSTALL')
+    ch_len = np.min(np.concatenate([dy[k].apply(len).values for k in dy]))
+    mean_dx = pd.DataFrame({k: np.mean(np.vstack(dy[k].apply(lambda x: x[:ch_len]).values), axis=0) for k in dy})
+    hline = ((mean_dx['B11']-mean_dx['B12']).abs()>=3).idxmax()
     if dx=={} or dy=={}: continue
     fig, ax = plt.subplots()
     ax = plot_overlay_2d(ax,dx,dy,line_specs=plot_specs)
+    ax.axhline(mean_dx['B11'][hline])
+    ax.axhline(mean_dx['B12'][hline])
     ax = set_labels(ax, {'title': grp[0], 'xlabel': 'Angle Change', 'ylabel': 'Excursion', 'legend': {}})
     plt.show()
     plt.close(fig)
 
+#%%
+grouped = (table.query('DUMMY==\'Y2\'')
+                .drop('SE16-0364')
+                .table.query_list('MODEL',models)
+                .table.query_list('INSTALL',['B11','B12'])
+                .table.query_list('SLED',['old_accel'])
+                .groupby(['MODEL']))
+for grp in grouped:
+    dx = arrange_by_group(grp[1], chdata['DDown_x'], 'INSTALL')
+    dy = arrange_by_group(grp[1], chdata['DUp_y'], 'INSTALL')
+    ch_len = np.min(np.concatenate([dy[k].apply(len).values for k in dy]))
+    mean_dy = pd.DataFrame({k: np.mean(np.vstack(dy[k].apply(lambda x: x[:ch_len]).values), axis=0) for k in dy})
+    mean_dx = pd.DataFrame({k: np.mean(np.vstack(dx[k].apply(lambda x: x[:ch_len]).values), axis=0) for k in dx})
+    plt.plot(mean_dx['B12']-mean_dx['B11'], label='excursion')
+    plt.plot(mean_dy['B12']-mean_dy['B11'], label='v displ.')
+    plt.axhline(0, color='k', linewidth=1)
+    plt.title(grp[0])
+    plt.legend()
+    plt.show()
 #%% REGRESSION
 #%% regression
-ch0_list = ['Chest_3ms']
-plot_channels = ['TDDown_y-Angle']
+ch0_list = ['Min_DDown_y']
+plot_channels = ['Min_DDown_x']
 
 subset = (table.query('DUMMY==\'Y2\'')
 #               .drop(['SE16-0253','SE16-0257','SE16-0351', 'SE16-0364'])
 #               .table.query_list('MODEL',['PRONTO HIII-6-YR'])
-               .table.query_list('INSTALL',['B11','B12'])
+               .table.query_list('INSTALL',['B11', 'B12'])
                .table.query_list('SLED',['old_accel']))
 
 #ch0_list = [i for i in features.columns if 'SEBE' not in i]
@@ -497,7 +513,7 @@ for ch0 in ch0_list:
             yunit = '[ms]'
         
         rsq = {k: float(corr(x[k], y[k])) for k in x}
-        if max(rsq.values()) < 0.3 and min(rsq.values())>-0.3: continue
+#        if max(rsq.values()) < 0.3 and min(rsq.values())>-0.3: continue
         renamed = {k: rename(k).replace('\n','') + ' R=' + str(rsq[k])[:5] for k in x}
         combined_rsq = corr(pd.concat([x[k] for k in x]),pd.concat([y[k] for k in y]))
         combined_rsq = str(combined_rsq)[:6] if combined_rsq<0 else str(combined_rsq)[:5]

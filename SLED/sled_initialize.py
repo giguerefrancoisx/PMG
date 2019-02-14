@@ -64,13 +64,13 @@ append = [chdata]
 
 #%% angle stuff
 displacement = get_se_angle(chdata.index)
-se_angles = (displacement.apply(get_angle,axis=1)
-                         .apply(lambda x: x-x[0])
-                         .rename('Angle'))
+se_angles = displacement.apply(get_angle, axis=1).apply(lambda x: x-x[0]).rename('Angle')
+abs_angles = displacement.apply(get_angle, axis=1).rename('Abs_Angle')
 angle_t = displacement['Time']/1000
-displacement = (displacement.applymap(lambda x: x-x[0])
-                            .drop('Time',axis=1)
-                            .rename(lambda x: 'D'+x, axis=1))
+position = displacement.drop('Time', axis=1)
+displacement = position.applymap(lambda x: x-x[0]).rename(lambda x: 'D'+x, axis=1)
+
+
 # shift certain signals
 displacement.loc[['SE16-0378','SE16-0381','SE16-0379']] = displacement.loc[['SE16-0378','SE16-0381','SE16-0379']].applymap(lambda x: x[75:])
 se_angles.loc[['SE16-0378','SE16-0381','SE16-0379']] = se_angles.loc[['SE16-0378','SE16-0381','SE16-0379']].apply(lambda x: x[75:])
@@ -78,6 +78,8 @@ angle_t.loc[['SE16-0378','SE16-0381','SE16-0379']] = angle_t.loc[['SE16-0378','S
 
 append.append(displacement)
 append.append(se_angles)
+append.append(abs_angles)
+append.append(position)
 #%% clean up data
 set_to_nan = [['SE16-0414','12PELV0000Y7ACRA'],
               ['SE16-0337','12LUSP0000Y7FOXA'],
@@ -144,6 +146,12 @@ def get_all_features(csv_write=False,json_write=False):
     append.append((chdata['DDown_y'].apply(get_argmin)-chdata['Angle'].apply(get_argmax)).rename('TDDown_y-Angle'))
     append.append((chdata['DDown_x'].apply(get_argmin)-chdata['Angle'].apply(get_argmax)).rename('TDDown_x-Angle'))
     append.append((chdata['DDown_x'].apply(get_argmin)-chdata['DDown_y'].apply(get_argmax)).rename('TDDown_x-DDown_y'))
+    
+    #
+    sb_at_min_chestz = get_x_at_y(chdata['12SEBE0000B3FO0D'], chdata['12CHST0000Y2ACZC'].apply(get_argmin))
+    append.append(sb_at_min_chestz.rename('12SEBE0000B3FO0D_at_Min_12CHST0000Y2ACZC'))
+    sb_at_min_headz = get_x_at_y(chdata['12SEBE0000B3FO0D'], chdata['12HEAD0000Y2ACZA'].apply(get_argmin))
+    append.append(sb_at_min_headz.rename('12SEBE0000B3FO0D_at_Min_12HEAD0000Y2ACZA'))
     
     # head and chest 3ms, head and knee excursions
     append.extend([table[['Head 3ms', 'Chest 3ms', 'Head Excursion', 'Knee Excursion']].rename(lambda x: x.replace(' ','_'),axis=1).rename_axis('SE'),
