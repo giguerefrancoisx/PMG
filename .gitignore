@@ -20,3 +20,4 @@ __pycache__/read_data.cpython-37.pyc
 Local/
 Other/
 
+*.ini
