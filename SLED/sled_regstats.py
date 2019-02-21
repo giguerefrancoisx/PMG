@@ -17,7 +17,6 @@ import json
 from PMG.SLED.sled_initialize import table, t, chdata, angle_t, get_all_features
 from PMG.SLED.sled_helper import *
 from functools import partial
-import lightgbm as lgb
 import glob
 import copy
 
@@ -36,6 +35,8 @@ install_order = {'Y7': ['H1','H3','HB','LB'],
                  'Y2': ['C1','B0','B11','B12']}
 #%%
 features = get_all_features(csv_write=False,json_write=False)
+
+print(features.loc[subset.index, plot_channels + ['Chest_3ms']].sort_values('Chest_3ms'))
 #%%
 with open(directory+'params.json','r') as json_file:
     to_JSON = json.load(json_file)
@@ -146,7 +147,9 @@ plot_channels = ['Max_12SEBE0000B3FO0D',
                  'Max_12LUSP0000Y7MOZA',
                  'X12CHST0000Y2ACXC_at_12CHST0000Y2ACRC',
                  'X12CHST0000Y2ACZC_at_12CHST0000Y2ACRC',
-                 'Tmax_Angle']
+                 'Tmax_Angle',
+                 'energy_trapz',
+                 'energy_simpson']
 
 grouped = table.groupby(['DUMMY'])
 for d in dummies:
@@ -183,19 +186,15 @@ for d in dummies:
             plt.show()
             plt.close(fig)
 
-#%% bar plots model by model
-plot_channels = ['Min_DUp_x',
-                 'Min_DDown_x',
-                 'Min_DUp_y',
-                 'Min_DDown_y',
-                 'Min_Down_y']
-subset = (table.table.query_list('MODEL', models)
-                .table.query_list('SLED',['old_accel'])
-                .table.query_list('INSTALL',['B11','B12']))
+#%% bar plots with model on the x axis
+plot_channels = ['energy_trapz',
+                 'energy_simpson']
+subset = (table.table.query_list('MODEL', ['PRONTO HIII-6-YR'])
+                .table.query_list('SLED',['new_accel', 'new_decel']))
 subset['MODEL'] = subset['MODEL'].replace(names)
 
 for ch in plot_channels:
-    x = arrange_by_group(subset, features[ch], 'INSTALL','MODEL')
+    x = arrange_by_group(subset, features[ch], 'SLED','MODEL')
     print(ch)
     print(x)
     fig, ax = plt.subplots()

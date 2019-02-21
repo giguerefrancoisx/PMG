@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from PMG.read_data import initialize, get_se_angle
 from PMG.COM.get_props import *
+from scipy.integrate import trapz, simps
 
 directory = 'P:\\Data Analysis\\Projects\\SLED\\'
 cutoff = range(100,1600)
@@ -118,9 +119,16 @@ def get_all_features(csv_write=False,json_write=False):
         append.append(component_at_res.rename(lambda x: 'X' + x + '_at_' + ch, axis=1))
         append.append(component_at_res.div(chdata[ch].apply(get_max),axis=0).rename(lambda x: x + '/' + ch, axis=1).abs())
     
+    # get energy
+    energy_trapz = chdata['S0SLED000000ACXD'].apply(lambda x: x[:850]).apply(trapz, dx=1/10000)
+    energy_simpson = chdata['S0SLED000000ACXD'].apply(lambda x: x[:850]).apply(simps, dx=1/10000)
+    append.append(energy_trapz.rename('energy_trapz'))
+    append.append(energy_simpson.rename('energy_simpson'))
+    
     # get displacements at peak angle change
     d_at_peak_angle = get_x_at_y(displacement, se_angles.apply(get_argmax))
     append.append(d_at_peak_angle.rename(lambda x: x + '_at_Angle', axis=1))
+    
     
     # get sled acceleration at peak chest Acx
     sled_at_peak_chest = get_x_at_y(chdata['S0SLED000000ACXD'], chdata['12CHST0000Y7ACXC'].apply(get_argmin))

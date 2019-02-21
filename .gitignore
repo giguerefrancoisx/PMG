@@ -21,3 +21,5 @@ Local/
 Other/
 
 *.ini
+SLED/__pycache__/sled_helper.cpython-37.pyc
+SLED/__pycache__/sled_initialize.cpython-37.pyc
