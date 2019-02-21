@@ -166,6 +166,20 @@ def plot_bs_distribution(ax,x,bins,ci={},c={}):
     return ax
 
 
+def get_indices(n_cat, df_size, width):
+    """gets the indices for bar plots. n_cat is the number of categories (i.e. colours)
+    df_size is the number of different conditions (i.e. x position)
+    returns a list specifying the indices for each corresponding category"""
+    indices_centers = n_cat*np.arange(df_size)
+    if n_cat%2==0:
+        # even number of categories
+        indices = [indices_centers+i*width/2 for i in range(-n_cat//2,n_cat//2+1) if i!=0]
+    else:
+        # odd number of categories
+        indices = [indices_centers+i*width for i in range(-n_cat//2+1,n_cat//2+1)]
+    return indices, indices_centers
+
+
 def plot_bar(ax,x,errorbar=True,var=pd.DataFrame.std,width=0.6,plot_specs={},order=[]):
     """plots a bar graph on ax. x is the input data in the form 
     {category name: DataFrame of (n_samples,n_classes)}. Bars are mean values
@@ -174,20 +188,14 @@ def plot_bar(ax,x,errorbar=True,var=pd.DataFrame.std,width=0.6,plot_specs={},ord
     should have the same number of columns. width is the bar width and plot_specs is 
     a dictionary of {category: {dict of plotting specs}}"""
     
-    df_size = [x[k].shape[1] for k in x]
+    df_size = [x[k].shape[1] if len(x[k].shape)>1 else 1 for k in x]
     n_cat = len(x)
     plot_specs = initiate_missing_keys(plot_specs, x.keys(), cls={})
     
     if len(dict.fromkeys(df_size))>1:
         raise Exception('ncol should be the same for all DataFrames')
     
-    indices_centers = n_cat*np.arange(df_size[0])
-    if n_cat%2==0:
-        # even number of categories
-        indices = [indices_centers+i*width/2 for i in range(-n_cat//2,n_cat//2+1) if i!=0]
-    else:
-        # odd number of categories
-        indices = [indices_centers+i*width for i in range(-n_cat//2+1,n_cat//2+1)]
+    indices, indices_centers = get_indices(n_cat, df_size[0], width)
 
     order = get_order(order, x)        
     for i, k in enumerate(order):
@@ -323,6 +331,7 @@ def plot_scatter_with_labels(x, y, marker_specs={}):
         plotly_fig['data'][i]['name'] = labels[i]
         plotly_fig['data'][i]['hoverinfo'] = 'name'
     return plotly_fig
+    
 
 def get_legend_labels(ax):
     """gets the unique legend labels out of the lines/patches/whatever in ax.
