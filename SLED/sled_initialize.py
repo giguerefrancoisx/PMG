@@ -120,10 +120,15 @@ def get_all_features(csv_write=False,json_write=False):
         append.append(component_at_res.div(chdata[ch].apply(get_max),axis=0).rename(lambda x: x + '/' + ch, axis=1).abs())
     
     # get energy
-    energy_trapz = chdata['S0SLED000000ACXD'].apply(lambda x: x[:850]).apply(trapz, dx=1/10000)
-    energy_simpson = chdata['S0SLED000000ACXD'].apply(lambda x: x[:850]).apply(simps, dx=1/10000)
+    energy_trapz = chdata['S0SLED000000ACXD'].apply(lambda x: x[:900]).apply(trapz, dx=1/10)
+    energy_simpson = chdata['S0SLED000000ACXD'].apply(lambda x: x[:900]).apply(simps, dx=1/10)
     append.append(energy_trapz.rename('energy_trapz'))
     append.append(energy_simpson.rename('energy_simpson'))
+    
+    energy_trapz = chdata['S0SLED000000ACXD'].apply(lambda x: x[:500]).apply(trapz, dx=1/10)
+    energy_simpson = chdata['S0SLED000000ACXD'].apply(lambda x: x[:500]).apply(simps, dx=1/10)
+    append.append(energy_trapz.rename('energy_trapz_trunc'))
+    append.append(energy_simpson.rename('energy_simpson_trunc'))
     
     # get displacements at peak angle change
     d_at_peak_angle = get_x_at_y(displacement, se_angles.apply(get_argmax))

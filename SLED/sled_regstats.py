@@ -36,7 +36,7 @@ install_order = {'Y7': ['H1','H3','HB','LB'],
 #%%
 features = get_all_features(csv_write=False,json_write=False)
 
-print(features.loc[subset.index, plot_channels + ['Chest_3ms']].sort_values('Chest_3ms'))
+print(features.loc[subset.index, ['energy_trapz_trunc','energy_trapz','Chest_3ms']].sort_values('Chest_3ms'))
 #%%
 with open(directory+'params.json','r') as json_file:
     to_JSON = json.load(json_file)
