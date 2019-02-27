@@ -297,6 +297,19 @@ def plot_overlay_2d(ax,x,y,line_specs={}):
     return ax
 
 
+def plot_bands(ax, t, x, **kwargs):
+    """seaborn lineplot"""
+    sns_df = []
+    for k in x: 
+        for i in x[k].index:
+            df = pd.DataFrame({'time': t, 'signal': x[k][i]})
+            df['grp'] = k
+            sns_df.append(df)
+    sns_df = pd.concat(sns_df, axis=0)
+    ax = sns.lineplot(x='time', y='signal', hue='grp', data=sns_df, ax=ax, **kwargs)
+    return ax
+
+    
 def plot_scatter(ax,x,y,marker_specs={}):
     """plots a scatter plot using data in x and y onto ax
     marker specs are dicts of {label name: dict of marker specs}"""

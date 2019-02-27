@@ -33,6 +33,8 @@ names = pd.read_csv(directory+'names.csv',index_col=0,header=None,squeeze=True).
 rename = partial(rename, names=names)
 install_order = {'Y7': ['H1','H3','HB','LB'],
                  'Y2': ['C1','B0','B11','B12']}
+
+models = ['Evenflo Embrace  CRABI','SNUGRIDE CRABI','Cybex Aton Q']
 #%%
 features = get_all_features(csv_write=False,json_write=False)
 
@@ -222,7 +224,6 @@ for c in comparison:
             plt.close(fig)
 
 #%% euclidean distance of B11 vs B12
-models = ['Evenflo Embrace  CRABI','SNUGRIDE CRABI','Cybex Aton Q']
 installs = ['B11','B12']
 cols = ['DUp_x','DUp_y','DDown_x','DDown_y']
 grouped = table.table.query_list('MODEL',models).table.query_list('INSTALL',installs).groupby(['MODEL','SLED'])
@@ -262,7 +263,9 @@ for c in comparison:
         
 #%% TIME SERIES OVERLAYS
 #%% plot overlays model-by-model
-plot_channels = [ch for ch in chdata.columns if 'Y2' in ch]
+plot_channels = ['12HEAD0000Y2ACXA',
+                 '12HEAD0000Y2ACZA',
+                 '12HEAD0000Y2ACRA']
 grouped = (table.drop('SE16-0338')
                 .table.query_list('INSTALL',['B11', 'B12'])
                 .table.query_list('MODEL',models)
@@ -276,9 +279,9 @@ for ch in plot_channels:
         x = arrange_by_group(subset[1], chdata[ch], 'INSTALL')
         if len(x)==0: continue
         print(subset[0])
-#        line_specs = {rename(k): copy.deepcopy(plot_specs[k]) for k in plot_specs}
-#        line_specs[rename('new_accel')]['alpha'] = 0.3
-#        line_specs[rename('new_decel')]['alpha'] = 0.3
+        line_specs = {rename(k): copy.deepcopy(plot_specs[k]) for k in plot_specs}
+        line_specs[rename('new_accel')]['alpha'] = 0.3
+        line_specs[rename('new_decel')]['alpha'] = 0.3
         fig, ax = plt.subplots()
         ax = plot_overlay(ax, t, x, line_specs=line_specs)
 #        ax.plot(t, chdata.at['SE16-0338',ch], color='#ff00bf', linewidth=2, linestyle='--', label='Model F low')
@@ -312,8 +315,9 @@ for grp in grouped:
     plt.show()
     plt.close(fig)
 #%% plot overlays of excursions vs. time comparing installations
-plot_channels = ['Down_y',
-                 'Down_x']
+plot_channels = ['DUp_x',
+                 'DDown_x',
+                 'Angle']
 models = ['Evenflo Embrace  CRABI','SNUGRIDE CRABI','Cybex Aton Q']
 grouped = (table.query('DUMMY==\'Y2\'')
                 .table.query_list('MODEL',models)
@@ -470,15 +474,59 @@ for grp in grouped:
     plt.legend()
     plt.show()
 #%% REGRESSION
+#%% lasso lars
+from sklearn.linear_model import LassoCV, LassoLarsCV
+from sklearn.preprocessing import StandardScaler
+
+subset = table.table.query_list('INSTALL',['B11','B12']).query('SLED==\'old_accel\'')
+
+drop = ['Min_12SEBE0000B6FO0D',
+        'Max_Up_x',
+        'DDown_x_at_DDown_y',
+        'Tmin_12SEBE0000B6FO0D',
+        'Tmin_S0SLED000000ACXD',
+        'DDown_x_at_Angle',
+        'energy_trapz',
+        'energy_simpson',
+        'DUp_x_at_DDown_y',
+        'Head_3ms',
+        'Min_DUp_x',
+        'Max_12HEAD0000Y2ACRA',
+        'DUp_x_at_Angle',
+        'Min_12HEAD0000Y2ACXA',
+        'Max_12HEAD0000Y2ACYA',
+        'Min_12HEAD0000Y2ACYA',
+        'Min_12CHST0000Y2ACRC',
+        'Max_12CHST0000Y2ACYC',
+        'Tmin_12CHST0000Y2ACRC',
+        'Tmin_12HEAD0000Y2ACXA',
+        'Tmax_12SEBE0000B6FO0D']
+x = features.loc[subset.index].drop('Min_DDown_x', axis=1)
+x = x.drop([i for i in drop if i in x.columns], axis=1)
+x = x.dropna(axis=1, how='all')
+y = features.loc[subset.index, 'Min_DDown_x']
+for col in x:
+    x[col] = x[col].replace(np.nan, x[col].mean())
+keep_idx = y[~y.isna()].index
+x = x.loc[keep_idx]
+y = y.loc[keep_idx]
+
+ss = StandardScaler()
+x = pd.DataFrame(ss.fit_transform(x), index=x.index, columns=x.columns)
+model = LassoLarsCV()
+model = model.fit(x, y)
+coefs = pd.Series(model.coef_, index=x.columns)
+keep_cols = coefs[coefs.abs()>0]
+print(keep_cols)
 #%% regression
-ch0_list = ['Min_DDown_y']
-plot_channels = ['Min_DDown_x']
+ch0_list = ['Tmin_DDown_y']
+plot_channels = ['Tmin_DDown_x']
 
 subset = (table.query('DUMMY==\'Y2\'')
 #               .drop(['SE16-0253','SE16-0257','SE16-0351', 'SE16-0364'])
 #               .table.query_list('MODEL',['PRONTO HIII-6-YR'])
                .table.query_list('INSTALL',['B11', 'B12'])
-               .table.query_list('SLED',['old_accel']))
+               .table.query_list('SLED',['new_accel', 'new_decel']))
 
 #ch0_list = [i for i in features.columns if 'SEBE' not in i]
 #plot_channels = ['Min_12CHST0000Y7DSXB']
