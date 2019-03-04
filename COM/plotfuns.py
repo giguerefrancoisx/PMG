@@ -124,8 +124,7 @@ def plot_categorical_scatter(ax,x,show_error=True,var=lambda x: pd.Series.std(pd
     """plots a scatter plot with categories along the x axis and values along the y axis
     x: dict of {category name: samples} 
     var: error metric (e.g. std, variance). Default is pandas sample std.
-    **kwargs are passed onto sns.stripplot. An important one is jitter, which controls the amount
-    of jitter between points in the same category."""
+    **kwargs are passed onto sns.stripplot. An important one is jitter."""
     labels = [k for k in x for i in range(len(x[k]))]
     values = [x[k][i] for k in x for i in range(len(x[k]))]
     

@@ -101,6 +101,7 @@ def initialize(directory,channels,cutoff,tc=[],query=None,query_list=[],filt=Non
     if all(in_common_store):
         t, fulldata = read_from_common_store(tc=tc, channels=channels, verbose=verbose)
     else:
+        print('TCs missing from common store. Checking directory {} for data...'.format(directory))
         t, fulldata = openHDF5(directory + 'Data\\', channels = channels)
         
     chdata = arrange.to_chdata(fulldata,cutoff).filter(items=tc,axis=0)

@@ -65,6 +65,14 @@ def read_table_xw(path, empty_val='NA'):
     return table
 
 
+def delete_time_channel_from_testframe(df, colnames, row_index):
+    """input testframe, colnames, row_index"""
+    tcol = df.loc[row_index][df.loc[row_index]=='T']
+    if len(tcol)>0:
+        df = df.drop(tcol.index, axis=1)
+    return df
+
+
 def read_excel(path):
     """reads an excel file (extension .xls or .xlsx) using pandas or xlwings."""
     try:
@@ -83,6 +91,7 @@ def read_excel(path):
         colnames, row_index = get_colnames(testframe)
         if 'T_10000_0' not in colnames.values():
             print('Warning: T_10000_0 not in ' + path)
+        testframe = delete_time_channel_from_testframe(testframe, colnames, row_index)
         testframe = testframe.rename(colnames, axis=1)
         testframe = get_data(testframe)
     
@@ -118,6 +127,7 @@ def check_filenames(filenames, regex='[TS][CE]\d{2}-\d{3,4}.'):
         return 'unmatched names'
     else:
         return 'ok'
+
 
 # to do: add option of editing testframe and re-checking
 def writeHDF5(directory, file_check=1, data_check=1):
@@ -156,10 +166,10 @@ def writeHDF5(directory, file_check=1, data_check=1):
         print(''.join(l))
         
         new_name = re.search('\w{4}-\d{3,4}(_\d+)?',filename).group().replace('-','N')
-#        if new_name in stored_tests:
-#            print(new_name + ' already in keys! skipping...')
-#            i = i + 1
-#            continue
+        if new_name in stored_tests:
+            print(new_name + ' already in keys! skipping...')
+            i = i + 1
+            continue
         if filename.endswith(('.xls','.xlsx')):
             testframe = read_excel(directory+filename)
         elif filename.endswith(('.csv')) and ('channel_names' not in filename) and ('test_names' not in filename):
@@ -209,6 +219,9 @@ def write_angle(directory):
                 continue
             ds = test_store.create_dataset(new_name,shape=(testframe.shape[0],),dtype=types)
             ds[...] = testframe.apply(tuple,axis=1).values
+
+        
+
         
 #%%%
 if __name__=='__main__':

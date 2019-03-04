@@ -130,7 +130,7 @@ for c in comparison:
         if i + (c,) in grp.index:
             diff[c].loc[i] = grp.loc[i+(c,)] - grp.loc[i+('new_accel',)]
     diff[c].index.names = ['MODEL','INSTALL','DUMMY']
-    diff[c].to_csv(directory + c + '.csv')
+#    diff[c].to_csv(directory + c + '.csv')
 
 #%% CATEGORICAL
 #%% bar plots comparing different responses on the two benches or on the two sleds
