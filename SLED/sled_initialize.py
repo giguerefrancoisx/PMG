@@ -46,7 +46,8 @@ channels = ['S0SLED000000ACXD',
             '12PELV0000Y7ACZA',
             '12PELV0000Y7ACRA',
             '12SEBE0000B3FO0D',
-            '12SEBE0000B6FO0D']
+            '12SEBE0000B6FO0D',
+            'S0SLED000000VEXD']
 
 query_list = [['DUMMY',['Y2','Y7']],
               ['INSTALL',['H1','H3','HB','LB','C1','B0','B11','B12']]]
@@ -105,7 +106,8 @@ def get_all_features(csv_write=False,json_write=False):
     feature_funs = {'Min_': [get_min],
                     'Max_': [get_max],
                     'Tmin_': [get_argmin,i_to_t],
-                    'Tmax_': [get_argmax,i_to_t]}
+                    'Tmax_': [get_argmax,i_to_t],
+                    'Auc_': [get_auc]}
     
     # peak and time to peak of each channel
     features = pd.concat(chdata.chdata.get_features(feature_funs).values(),axis=1,sort=True)

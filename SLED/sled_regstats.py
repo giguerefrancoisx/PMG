@@ -35,10 +35,14 @@ install_order = {'Y7': ['H1','H3','HB','LB'],
                  'Y2': ['C1','B0','B11','B12']}
 
 models = ['Evenflo Embrace  CRABI','SNUGRIDE CRABI','Cybex Aton Q']
+thresholds = {'Head_Excursion': [720, 813],
+              'Knee_Excursion': [915],
+              'Head_3ms': [80],
+              'Chest_3ms': [60]}
+linestyles = ['--',':']
 #%%
 features = get_all_features(csv_write=False,json_write=False)
 
-print(features.loc[subset.index, ['energy_trapz_trunc','energy_trapz','Chest_3ms']].sort_values('Chest_3ms'))
 #%%
 with open(directory+'params.json','r') as json_file:
     to_JSON = json.load(json_file)
@@ -148,10 +152,7 @@ plot_channels = ['Max_12SEBE0000B3FO0D',
                  'Min_DDown_y',
                  'Max_12LUSP0000Y7MOZA',
                  'X12CHST0000Y2ACXC_at_12CHST0000Y2ACRC',
-                 'X12CHST0000Y2ACZC_at_12CHST0000Y2ACRC',
-                 'Tmax_Angle',
-                 'energy_trapz',
-                 'energy_simpson']
+                 'X12CHST0000Y2ACZC_at_12CHST0000Y2ACRC']
 
 grouped = table.groupby(['DUMMY'])
 for d in dummies:
@@ -182,7 +183,10 @@ for d in dummies:
             ax = set_labels(ax, {'title': rename(ch), 'ylabel': get_units(ch)})
             ax = adjust_font_sizes(ax, {'ticklabels':20,'title':24,'ylabel':20})
 #            ax.legend(ncol=2,bbox_to_anchor=(1,1))
-#            ax = adjust_font_sizes(ax, {'ticklabels':16,'title':20,'legend':18,'ylabel':18})
+            if ch in thresholds:
+                for i in range(len(thresholds[ch])):
+                    ax.axhline(thresholds[ch][i], linestyle=linestyles[i], color='r')
+                    y = np.append(y, thresholds[ch][i])
             ax.set_ylim([0, 1.2*max(y)])
             ax.set_xticklabels([rename(x) for x in installs])
             plt.show()

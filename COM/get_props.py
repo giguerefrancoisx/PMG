@@ -7,6 +7,7 @@ Created on Fri Feb 16 16:23:18 2018
 import numpy as np
 import scipy.signal as signal
 import pandas as pd
+from scipy.integrate import trapz, simps
 #from PMG.COM.intersection import intersection
 # get properties of curves
 
@@ -54,6 +55,13 @@ def get_i_to_t(t):
         else:
             return t[int(i)]
     return i_to_t
+
+
+def get_auc(data, dt=1/10000):
+    if np.isnan(data).all():
+        return np.nan
+    else:
+        return trapz(data, dx=dt)
 
 
 def get_x_at_y(x, y):
