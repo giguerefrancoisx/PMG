@@ -58,6 +58,10 @@ def renameISO(name):
         return 'Chest 3ms clip'
     elif 'TIIN' in name:
         return 'Tibia Index ' + name[6:8]
+    elif 'SEBE0000B6FO' in name:
+        return 'Lap belt load'
+    elif 'SEBE0000B3FO' in name:
+        return 'Shoulder belt load'
     
 #    name1 = name[:2]
     name2 = name[2:6]
@@ -73,8 +77,6 @@ def renameISO(name):
         name2 = 'Chest '
     elif name2=='PELV':
         name2 = 'Pelvis '
-    elif name2=='SEBE':
-        name2 = 'Belt '
     elif name2=='SPIN':
         name2 = 'T'
     elif name2=='NECK':
@@ -84,7 +86,7 @@ def renameISO(name):
     elif name2=='CLAV':
         name2 = 'Clavicle '
     elif name2=='CVEH':
-        name2 = 'Veh'
+        name2 = 'Vehicle'
     elif name2=='ABDO':
         name2 = 'Abdomen '
     elif name2=='THSP':
@@ -104,20 +106,20 @@ def renameISO(name):
     elif name2=='FOOT':
         name2 = 'Foot '
     elif name2=='SIME':
-        name2 = 'Veh ' 
+        name2 = 'Vehicle ' 
         
     if name3=='00':
         name3 = ''
     elif name3=='LE':
-        name3 = 'L '
+        name3 = 'Left '
     elif name3=='RI':
-        name3 = 'R '
+        name3 = 'Right '
     elif name3.isnumeric():
         name3 = name3
     elif name3=='LO':
-        name3 = 'Lo '
+        name3 = 'Lower '
     elif name3=='UP':
-        name3 = 'Up '
+        name3 = 'Upper '
     elif name3=='CG':
         name3 = 'CG '
     elif name3=='TP':
@@ -126,22 +128,17 @@ def renameISO(name):
     if name4=='00':
         name4 = ''
     elif name4=='UP':
-        name4 = 'Up '
+        name4 = 'Upper '
     elif name4=='LO':
-        name4 = 'Lo '
+        name4 = 'Lower '
     elif name4=='IN':
-        name4 = 'In '
+        name4 = 'Inner '
     elif name4=='OU':
-        name4 = 'Out '
+        name4 = 'Outer '
     elif name4=='MI':
         name4 = 'Mid '
         
-    if name5=='B3':
-        name5 = 'Shoulder '
-    elif name5=='B6':
-        name5 = 'Lap '
-    else:
-        name5 = ''
+    name5 = ''
     
     if name6=='AC':
         name6 = 'Ac'
@@ -150,9 +147,9 @@ def renameISO(name):
     elif name6=='MO':
         name6 = 'M'
     elif name6=='AN':
-        name6 = 'An'
+        name6 = 'Angle '
     elif name6=='AV':
-        name6 = 'AV'
+        name6 = 'Angular Velocity '
     elif name6=='DS':
         name6 = 'D'
     elif name6=='DC':

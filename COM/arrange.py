@@ -118,15 +118,26 @@ def intersect_columns(x):
 def match_groups(x, y):
     """x and y are two outputs of arrange_by_group. This function checks 
     that x and y have the same number of elements in each key:value pair"""
+    rm_keys = []
     for k in x:
         i = ordered_intersect(x[k].index,y[k].index)
         if i==[]:
-            return
+            rm_keys.append(k)
         else:
             x[k] = x[k].loc[i]
             y[k] = y[k].loc[i]
+    while len(rm_keys)>0:
+        k = rm_keys.pop()
+        _ = x.pop(k)
+        if k in y:
+            _ = y.pop(k)
 
 
+def match_keys(x, y):
+    keys = ordered_intersect(list(x.keys()), list(y.keys()))
+    x = {k: x[k] for k in keys}
+    y = {k: y[k] for k in keys}
+    return x, y
     
 #--------------- get rid of these eventually ----------------------------------    
 ## data is a dataframe
