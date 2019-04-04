@@ -17,7 +17,9 @@ from PMG.COM.helper import ordered_intersect
 def read_table(file):
     """Reads a csv file and uses SE or TC column as the index"""
     table = pd.read_csv(file)
-    if 'SE' in table.columns:
+    if 'ID' in table.columns:
+        table = table.set_index('ID',drop=True)
+    elif 'SE' in table.columns:
         table = table.set_index('SE',drop=True)
     elif 'TC' in table.columns:
         table = table.set_index('TC',drop=True)
@@ -42,8 +44,9 @@ def read_from_common_store(tc,channels,verbose=False):
         directories.append('P:\\Data Analysis\\Data\\SE\\')
     
     for directory in directories:
+        read = read_tc if directory.endswith('TC\\') else read_se
         with h5py.File(directory+'Tests.h5','r') as test_store:
-            for i in tc:
+            for i in read:
                 if verbose:
                     print('Retrieving ' + i)
                 header = test_store[i.replace('-','N')].dtype.names
@@ -54,8 +57,8 @@ def read_from_common_store(tc,channels,verbose=False):
                     tc_fulldata[i] = pd.DataFrame(test_store[i.replace('-','N')][colnames], columns=[colnames[0][1:]])
                 else:
                     tc_fulldata[i] = arrange.h5py_to_df(test_store[i.replace('-','N')][colnames]).rename(lambda x: x.lstrip('X'),axis=1)
-        for ch in channels:
-            ch_fulldata[ch] = pd.DataFrame.from_dict({i: tc_fulldata[i][ch] for i in tc if ch in tc_fulldata[i]}) 
+    for ch in channels:
+        ch_fulldata[ch] = pd.DataFrame.from_dict({i: tc_fulldata[i][ch] for i in tc if ch in tc_fulldata[i]}) 
     t = np.arange(-0.01, 0.3999, 0.0001).round(4)
 #    t = tc_fulldata[tc[0]].loc[:4100,'T_10000_0'].round(4)
     return t, ch_fulldata
@@ -101,7 +104,9 @@ def initialize(directory,channels,cutoff,tc=[],query=None,query_list=[],filt=Non
     if all(in_common_store):
         t, fulldata = read_from_common_store(tc=tc, channels=channels, verbose=verbose)
     else:
-        print('TCs missing from common store. Checking directory {} for data...'.format(directory))
+        print('The following TCs are missing from common store:')
+        print([i for i in tc if i not in common_store_tcs])
+        print('Checking directory {} for data...'.format(directory))
         t, fulldata = openHDF5(directory + 'Data\\', channels = channels)
         
     chdata = arrange.to_chdata(fulldata,cutoff).filter(items=tc,axis=0)

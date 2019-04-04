@@ -25,22 +25,17 @@ def match_columns(table, regex='\d{2}[A-Z0-9]{14}'):
     for i in table.index:
         contains_exp = table.loc[i].str.contains(regex)
         if contains_exp.any():
-            return table.loc[i, contains_exp].to_dict(), i
-    return {}, -1
+            return i
+    return -1
 
 
 def get_colnames(table, channel_exp='\d{2}[A-Z0-9]{14}', time_exp='T_10000_0'):
-    names, row = match_columns(table, regex=channel_exp)
-    t_names, t_row = match_columns(table, regex=time_exp)
-    if len(t_names)==0:
-        return names, row
-    elif len(t_names)>1:
-        print('Error: number of time columns >1. Check regexp.')
-        return
+    row = match_columns(table, regex=channel_exp)
+    t_row = match_columns(table, regex=time_exp)
     if row!=t_row: 
         print('Error: time column and channel column were not in the same row. Check data.')
         return
-    names.update(t_names)
+    names = table.loc[row].to_dict()
     return names, row
     
     
@@ -65,38 +60,52 @@ def read_table_xw(path, empty_val='NA'):
     return table
 
 
-def delete_time_channel_from_testframe(df, colnames, row_index):
-    """input testframe, colnames, row_index"""
-    tcol = df.loc[row_index][df.loc[row_index]=='T']
-    if len(tcol)>0:
-        df = df.drop(tcol.index, axis=1)
+def delete_columns(cols_to_delete, df, row_index):
+    """deletes col_to_delete from df
+    col_to_delete (list of strings): names of column to delete
+    df (dataframe): dataframe of data
+    row_index (int): index of the row where channel names are stored"""
+    drop = []
+    for col in cols_to_delete:
+        tcol = df.loc[row_index][df.loc[row_index]==col]
+        drop.append(tcol.index)
+    if len(drop)>0:
+        df = df.drop(drop, axis=1)
     return df
 
 
-def read_excel(path):
+def read_excel(path, delete_cols=[]):
     """reads an excel file (extension .xls or .xlsx) using pandas or xlwings."""
     try:
         testframe = pandas.read_excel(path,sheet_name=None, header=0,index_col=0, skiprows=[1,2],dtype=numpy.float64)
         testframe = pandas.concat(list(testframe.values()), axis=1)
-        try:
-            start = int(numpy.searchsorted(testframe.loc[:,'T_10000_0'], -0.01001))
-            end = int(numpy.searchsorted(testframe.loc[:,'T_10000_0'], 0.3999))+1
-        except KeyError as e:
-            raise KeyError('{} of test: {}. File has a different arangement '\
-                           'of data or is missing time column'.format(e, path))
-        testframe = testframe.iloc[start:end,:]
-        
     except:
         testframe = read_table_xw(path)
         colnames, row_index = get_colnames(testframe)
         if 'T_10000_0' not in colnames.values():
             print('Warning: T_10000_0 not in ' + path)
-        testframe = delete_time_channel_from_testframe(testframe, colnames, row_index)
         testframe = testframe.rename(colnames, axis=1)
         testframe = get_data(testframe)
-    
+    if len(delete_cols)>0:
+        testframe = testframe.drop([col for col in delete_cols if col in testframe.columns], axis=1)
     return testframe
     
+
+def delete_tests(testlist, directory):
+    """deletes tests specified in testlist.
+    testlist is a list of the tests to be deleted from the HDF5 store.
+    directory specifies where the tests are stored"""
+    status = check_filenames(testlist)
+    if status=='ok':
+        ntest = len(testlist)
+        with h5py.File(directory + 'Tests.h5') as test_store:
+            for i, test in enumerate(testlist):
+                del test_store[test.replace('-','N')]
+                print('Deleted {0}/{1}'.format(i+1, ntest))
+    else:
+        print('Could not delete tests. Check file names')
+        return         
+
 
 def check_testframe(tf):
     """checks testframe to make sure the data imported and column names 
@@ -111,13 +120,13 @@ def check_testframe(tf):
         return 'nonreal'
     if 'T_10000_0' in tf.columns:
         tf = tf.drop('T_10000_0', axis=1)
-    ch_names = tf.filter(regex='\d{2}[A-Z0-9]{14}', axis=1).columns
+    ch_names = tf.filter(regex='[A-Z0-9]\d[A-Z0-9]{14}', axis=1).columns
     if len(ch_names) !=  len(tf.columns):
         return 'colnames' + str(tf.columns.drop(ch_names))
     return 'ok'
 
 
-def check_filenames(filenames, regex='[TS][CE]\d{2}-\d{3,4}.'):
+def check_filenames(filenames, regex='[TS][CE]\d{2}-\d{3,4}.*'):
     """checks file names before reading files to make sure
     the files to read are OK. Filenames is a list-like. Returns 'ok' if 
     autocheck passed and 'unmatched names' otherwise"""
@@ -130,7 +139,7 @@ def check_filenames(filenames, regex='[TS][CE]\d{2}-\d{3,4}.'):
 
 
 # to do: add option of editing testframe and re-checking
-def writeHDF5(directory, file_check=1, data_check=1):
+def writeHDF5(directory, file_check=1, data_check=1, delete_cols=[]):
     """reads .xls, .xlsx, and .csv data files and writes them to HDF5
     Optionally check filenames and data before reading and writing. Values of
     file_check and data_check correspond to:
@@ -171,7 +180,7 @@ def writeHDF5(directory, file_check=1, data_check=1):
             i = i + 1
             continue
         if filename.endswith(('.xls','.xlsx')):
-            testframe = read_excel(directory+filename)
+            testframe = read_excel(directory+filename, delete_cols=delete_cols)
         elif filename.endswith(('.csv')) and ('channel_names' not in filename) and ('test_names' not in filename):
             testframe = pandas.read_csv(directory+filename, dtype=numpy.float64)
         
@@ -179,12 +188,10 @@ def writeHDF5(directory, file_check=1, data_check=1):
             status = check_testframe(testframe)
             if status!='ok':
                 print(new_name,status,'df size:', testframe.shape,'df columns:',testframe.columns, sep='\n')
-                print(testframe)
                 return
                     
             if data_check>1:
                 print(new_name,status,'df size:', testframe.shape,'df columns:',testframe.columns, sep='\n')
-                print(testframe)
                 if input('continue? [y/n]')=='n':
                     return
         testframe.columns = ['X' + i for i in testframe.columns]
@@ -200,8 +207,6 @@ def writeHDF5(directory, file_check=1, data_check=1):
 def write_angle(directory):
     allfiles = os.listdir(directory)
     print('Reading files:')
-    count = len(allfiles)
-    i = 1
     for filename in allfiles:
         if filename.endswith(('.xls','.xlsx')):
             book = xw.Book(directory+filename)
@@ -229,18 +234,20 @@ if __name__=='__main__':
     
     def write_tc():
         directory_tc = 'P:\\Data Analysis\\Data\\TC\\'
-        writeHDF5(directory_tc, file_check=1, data_check=1)
+        delete_cols = ['T']
+        writeHDF5(directory_tc, file_check=1, data_check=1, delete_cols=delete_cols)
         update_test_info()
     
     def write_se():
         directory_se = 'P:\\Data Analysis\\Data\\SE\\'
-        writeHDF5(directory_se)
+        delete_cols = ['Time Upper', 'Upper Bond', 'Time Lower', 'Lower Bond', 'T']
+        writeHDF5(directory_se, file_check=1, data_check=1, delete_cols=delete_cols)
         update_test_info()
     
     def write_angle_213():
         directory_angle = 'P:\\Data Analysis\\Data\\angle_213\\'
         write_angle(directory_angle)
     
-    write_tc()
+#    write_tc()
 #    write_angle_213()
-#    write_se()
+    write_se()

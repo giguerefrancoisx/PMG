@@ -16,50 +16,6 @@ from PMG.COM.helper import *
 import plotly.tools as tls
 import copy
 
-# get rid of this
-# plot full dataset    
-#def plot_full(t,linkMe,models,subplot_dim,fig_size):
-#    fig, axs = plt.subplots(subplot_dim[0],subplot_dim[1], sharey = 'all',figsize=fig_size)
-#    
-#    for i, ax in enumerate(axs.flatten()):
-#        if i>=len(linkMe):
-#            break
-#        data = linkMe.iloc[i,:]
-#        ax.plot(t,data)
-#        ax.set_title(models[i])
-#        ax.set_ylabel('Acceleration [g]')
-#        ax.set_xlim(0,0.15)
-#        ax.set_xlabel('Time [s]')
-#    return fig
-
-
-# get rid of this
-# to do: consolidate this with the above function
-#def plot_full_2(t,data1,data2):
-#    files1 = data1.index
-#    n1 = int(np.ceil(len(files1)/10))
-#    
-#    if len(data2)>0:
-#        files2 = data2.index
-#        n2 = int(np.ceil(len(files2)/10))
-#    else:
-#        n2=0
-#        
-#    fig, axs = plt.subplots(n1+n2,10,sharey='all',figsize=(40,4*(n1+n2)))
-#    for i, ax in enumerate(axs[:n1].flatten()[range(len(files1))]):
-#        if len(data1[i]==1) and np.isnan(data1[i]).all():
-#            continue
-#        else:
-#            ax.plot(t,data1[i])
-#            ax.set_title(files1[i])
-#    if len(data2)>0:
-#        for i, ax in enumerate(axs[n1:].flatten()[range(len(files2))]):
-#            if len(data2[i]==1) and np.isnan(data2[i]).all():
-#                continue
-#            else:
-#                ax.plot(t,data2[i])
-#                ax.set_title(files2[i])  
-
 def rename_legend(ax, names):
     """renames legend entries
     names is a dict of {oldname: newname}"""
@@ -216,17 +172,26 @@ def plot_bar(ax,x,errorbar=True,var=pd.DataFrame.std,width=0.6,plot_specs={},ord
     return ax
 
 
-def add_stars(ax, indices, p, y, **kwargs):
-    """add stars (for significance) on axis ax at indices at y*1.05 if p<0.05
+def add_stars(ax, x, p, y, orientation='v', **kwargs):
+    """add stars (for significance) on axis ax at x at y*1.05 if p<0.05
     **kwargs goes into ax.text(). """
-    for i in range(len(indices)):
-        if p[i]<0.001: 
-            ax.text(indices[i], 1.05*y[i], '***', horizontalalignment='center', **kwargs)
-        elif p[i]<0.01:
-            ax.text(indices[i], 1.05*y[i], '**', horizontalalignment='center', **kwargs)
-        elif p[i]<0.05:
-            ax.text(indices[i], 1.05*y[i], '*', horizontalalignment='center', **kwargs)
-            
+    if orientation=='v':
+        for i in range(len(x)):
+            if p[i]<0.001: 
+                ax.text(x[i], 1.05*y[i], '***', horizontalalignment='center', **kwargs)
+            elif p[i]<0.01:
+                ax.text(x[i], 1.05*y[i], '**', horizontalalignment='center', **kwargs)
+            elif p[i]<0.05:
+                ax.text(x[i], 1.05*y[i], '*', horizontalalignment='center', **kwargs)
+    elif orientation=='h':
+        for i in range(len(x)):
+            if p[i]<0.001: 
+                ax.text(1.05*x[i], y[i], '***', va='center', **kwargs)
+            elif p[i]<0.01:
+                ax.text(1.05*x[i], y[i], '**', va='center', **kwargs)
+            elif p[i]<0.05:
+                ax.text(1.05*x[i], y[i], '*', va='center', **kwargs)
+        
             
 def plot_range(ax,x,c={},order=[]):
     """plots the range of values in x
