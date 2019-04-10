@@ -51,12 +51,19 @@ def read_from_common_store(tc,channels,verbose=False):
                     print('Retrieving ' + i)
                 header = test_store[i.replace('-','N')].dtype.names
                 colnames = tuple(ordered_intersect(map(lambda x: 'X'+x, channels), header))
-#                if 'XT_10000_0' not in colnames:
-#                    colnames = tuple(['XT_10000_0']) + colnames
+                t_i = test_store[i.replace('-','N')]['XT_10000_0']
+                start_row = np.where(np.round(t_i, 4)==-0.01)[0]
+                if len(start_row)==1:
+                    start_row = start_row[0]
+                else:
+                    print('Time channel error ({})'.format(i))
+                    start_row = 0
+    
                 if len(colnames)==1:
                     tc_fulldata[i] = pd.DataFrame(test_store[i.replace('-','N')][colnames], columns=[colnames[0][1:]])
                 else:
                     tc_fulldata[i] = arrange.h5py_to_df(test_store[i.replace('-','N')][colnames]).rename(lambda x: x.lstrip('X'),axis=1)
+                tc_fulldata[i] = tc_fulldata[i].loc[start_row:].reset_index(drop=True)
     for ch in channels:
         ch_fulldata[ch] = pd.DataFrame.from_dict({i: tc_fulldata[i][ch] for i in tc if ch in tc_fulldata[i]}) 
     t = np.arange(-0.01, 0.3999, 0.0001).round(4)
