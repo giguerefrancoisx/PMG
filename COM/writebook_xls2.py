@@ -248,6 +248,6 @@ if __name__=='__main__':
         directory_angle = 'P:\\Data Analysis\\Data\\angle_213\\'
         write_angle(directory_angle)
     
-#    write_tc()
+    write_tc()
 #    write_angle_213()
-    write_se()
+#    write_se()
