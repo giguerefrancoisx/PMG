@@ -140,20 +140,26 @@ def match_keys(x, y):
     return x, y
 
 
+def get_merged_name(names):
+    """The name of the series is all of the matching letters and xx where they are different
+    names is a list of the  names""" 
+    names = unpack(pd.Series(names).apply(list)).apply(set, axis=1)
+    name = ''.join([i.pop() if len(i)==1 else 'x' for i in names])    
+    return name
+
+
 def merge_columns(df):
     """To be used e.g. when reading the same channel from different dummies (e.g. THOR, H3) 
     or e.g. when reading different positions of the same dummies (e.g. 14 and 16)
     Assumes that for each row, there is one value and all other elements of the row are nan
     Returns a series. The name of the series is all of the matching letters and xx where they are different"""
-    colnames = unpack(pd.Series(df.columns).apply(list)).apply(set, axis=1)
-    name = ''.join([i.pop() if len(i)==1 else 'x' for i in colnames])
+    name = get_merged_name(df.columns)
     merged = df.stack().apply(lambda x: np.nan if is_all_nan(x) else x).dropna()
     merged.index = merged.index.get_level_values(0)
     merged = merged.rename(name)
     return merged
     
-    
-    
+
 #--------------- get rid of these eventually ----------------------------------    
 ## data is a dataframe
 #def arrange_by_peak(data):

@@ -35,8 +35,8 @@ def read_from_common_store(tc,channels,verbose=False):
     ch_fulldata = dict.fromkeys(channels)
     tc_fulldata = dict.fromkeys(tc)
     
-    read_tc = [i for i in tc if i[:2]=='TC']
-    read_se = [i for i in tc if i[:2]=='SE']
+    read_tc = np.unique([i for i in tc if i[:2]=='TC'])
+    read_se = np.unique([i for i in tc if i[:2]=='SE'])
     
     if len(read_tc)>0:
         directories.append('P:\\Data Analysis\\Data\\TC\\')
@@ -113,10 +113,8 @@ def initialize(directory,channels,cutoff,tc=[],query=None,query_list=[],filt=Non
     else:
         print('The following TCs are missing from common store:')
         print([i for i in tc if i not in common_store_tcs])
-        print('Checking directory {} for data...'.format(directory))
-        t, fulldata = openHDF5(directory + 'Data\\', channels = channels)
         
-    chdata = arrange.to_chdata(fulldata,cutoff).filter(items=tc,axis=0)
+    chdata = arrange.to_chdata(fulldata,cutoff)
     t = t[cutoff]
         
     return table, t, chdata

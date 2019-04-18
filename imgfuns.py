@@ -17,3 +17,7 @@ def write_tif_stack(filepath,files,image_range):
         for i in image_range:
             writer.append_data(reader.get_data(i))
         writer.close()
+        
+write_tif_stack(['C:\\Users\\tangk\\Desktop\\SE16-0210_Left View 6mm.avi'],
+                ['C:\\Users\\tangk\\Desktop\\SE16-0210_Left View 6mm STACK'],
+                range(200))
