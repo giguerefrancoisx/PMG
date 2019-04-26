@@ -51,8 +51,16 @@ def read_from_common_store(tc,channels,verbose=False):
                     print('Retrieving ' + i)
                 header = test_store[i.replace('-','N')].dtype.names
                 colnames = tuple(ordered_intersect(map(lambda x: 'X'+x, channels), header))
-                t_i = test_store[i.replace('-','N')]['XT_10000_0']
-                start_row = np.where(np.round(t_i, 4)==-0.01)[0]
+                grp_name = i.replace('-','N')
+                
+                if 'XT_10000_0' in header:
+                    t_i = test_store[i.replace('-','N')]['XT_10000_0']
+                    start_row = np.where(np.round(t_i, 4)==-0.01)[0]
+                else:
+                    print('Warning: no time channel found for {}.'.format(i))
+                    start_row = [0]
+                    
+                    
                 if len(start_row)==1:
                     start_row = start_row[0]
                 else:
