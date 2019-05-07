@@ -375,3 +375,12 @@ def adjust_font_sizes(ax, dictionary):
         ax.legend_.get_texts()[0].set_fontsize(dictionary['legend'])        
     
     return ax
+
+
+def do_anything(func, *args, **kwargs):
+    """Literally do anything.
+    func is the name of the function
+    *args and **kwargs are arguments that are passed to func
+    Returns whatever the function returns"""
+    res = eval('{}(*args, **kwargs)'.format(func))
+    return res

@@ -84,6 +84,28 @@ def partial_ordered_intersect(l1,l2):
     return out
 
 
+#%%
+def condense_df(df, thresh=0.05, thresh_type='upper_bound', axis=0):
+    """
+    df = condense(df)
+    Condenses a dataframe by removing either rows or columns where all elements
+    do not meet a certain criterion. The criterion is defined by thresh_type: 
+        upper_bound: thresh is a number. filters out all rows/columns where values are greater than upper_bound
+        lower_bound: thresh is a number. filters out all rows/columns where values are lower than lower_bound
+        between: thresh is a list of length 2. filters out all rows/columns where values are not between the lower and upper values in thresh.
+        outside: thresh is a list of length 2. filters out all rows/columns where values are between the lower and upper values in thresh.
+    axis=0 removes rows. axis=1 removes columns
+    """
+    if thresh_type=='upper_bound':
+        drop = (df > thresh).all(axis=1-axis)
+    elif thresh_type=='lower_bound':
+        drop = (df < thresh).all(axis=1-axis)
+    elif thresh_type=='between':
+        drop = ((df < min(thresh)) | (df > max(thresh))).all(axis=1-axis)
+    elif thresh_type=='outside':
+        drop = ((df > min(thresh)) & (df < max(thresh))).all(axis=1-axis)
+    drop = drop[drop].index
+    return df.drop(drop, axis=axis)
 
 # implemented in dfxtend table
 #def query_list(dataframe,column,qlist):

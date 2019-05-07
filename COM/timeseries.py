@@ -13,7 +13,6 @@ samples to form an empirical distribution of steps:
 @author: tangk
 """
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from scipy.signal import medfilt

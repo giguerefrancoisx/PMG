@@ -102,6 +102,18 @@ def get_onset_to_min(data, pct=0.1, thresh=None, filt=None):
     """does the same as get_onset_to_max but assumes the peak is negative"""
     return get_onset_to_max(-data, pct=pct, thresh=thresh, filt=filt)
     
+
+def get_peaks(chdata):
+    """
+    features = get_peaks(chdata)
+    Returns the max and min values of all time series in chdata. 
+    """
+    feature_funs = {'Min_': [get_min],
+                    'Max_': [get_max]} 
+    features = pd.concat(chdata.chdata.get_features(feature_funs).values(),axis=1,sort=True)
+    return features
+
+
 #def get_i2peak(data):
 #    if np.isnan(data).all():
 #        return [np.nan, np.nan]
