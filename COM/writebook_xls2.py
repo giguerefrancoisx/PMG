@@ -91,6 +91,95 @@ def read_excel(path, delete_cols=[]):
     return testframe
     
 
+def read_faro(path, delete_cols=[]):
+    faro_data = pandas.read_excel('C:\\Users\\tangk\\Desktop\\TC18-214VSTC13-024Mesures Faro.xls', header=None)
+    faro_data = faro_data.reset_index(drop=True).dropna(axis=0, how='all').dropna(axis=1, how='all')
+    faro_data = np.concatenate(faro_data.apply(lambda x: tuple(x.dropna()), axis=1).values)
+    return faro_data
+
+def split_sections(faro_data):
+    """splits the sections of faro_data into: crash_info, dummy_info, vehicle_info, faro_points"""    
+    # crash_info: starts at the beginning of the doc and continues until just before 'Cible'
+    # last entry is 'Vitesse'
+    cib_loc = np.where(faro_data=='Cible')[0]
+    crash_info_end = cib_loc
+    crash_info_end = crash_info_end[crash_info_end > np.where(faro_data=='Vitesse')[0][0]]
+    crash_info_end = crash_info_end[np.where(faro_data[crash_info_end+1] == '11')[0][0]]
+    
+    # dummy_info: starts at 'Cible' and ends where 'Cible' follows 'Attitudes (mm)'
+    dummy_info_end = cib_loc[np.where(faro_data[cib_loc+1]=='Attitudes (mm)')[0][0]]
+
+    # vehicle info: ends with 'Mesures'
+    vehicle_info_end = np.where(faro_data=='Mesures Véhicule')[0][0]
+    
+    split = {'crash_info': faro_data[:crash_info_end],
+             'dummy_info': faro_data[crash_info_end:dummy_info_end],
+             'vehicle_info': faro_data[dummy_info_end:vehicle_info_end],
+             'faro_points': faro_data[vehicle_info_end:]}
+    return split
+
+
+def parse_crash_info(x):
+    """takes an input of faro data of type crash_info and parses """
+    crash_info = {'TC1': x[0],
+                  'TC2': x[1],
+                  'test_type': x[2],
+                  'time': x[3]}
+    x = x[4:]
+    # assume that each element in x follows keyword --> value 
+    if len(x)%2>0: # if an odd number of elements, assume vitesse has not been filled
+        x = x[:-1].reshape(-1, 2).tolist()
+    else:
+        x = x.reshape(-1, 2).tolist()
+    
+    crash_info_df = pandas.DataFrame(columns=range(2))
+    i = 0
+    while len(x)>0:
+        kwarg = x.pop(0)
+        crash_info_df.at[kwarg[0], i] = kwarg[1]
+        i = 1 - i 
+    crash_info['data'] = crash_info_df
+    return crash_info
+
+
+# work on this later
+def parse_dummy_info(x):
+    x = x.tolist()
+    r = re.compile('^\d{2}$')
+    pos = list(filter(r.match, x))
+    pos_i = list(filter(lambda i: x[i] in pos, range(len(x))))
+    
+    dummy_info = dict.fromkeys(pos)
+    kws = ['Facing','Child restraint','Child seat restraint','Tether','Seat','Seat config','Seat base',
+           'Belt side','Seat belt adj','Load cell','Handle','Contact']       
+    
+    return x
+    
+# work on this later
+def parse_faro_points(x):
+    kws = ['ID','X','Y','Z','Description']
+    sep = ['Mesures Véhicule', 'Offset du point 1060', 'Mesures AX', 
+           'Mesures BX', 'Mesures DPD','Emplacement des accéléromètres']
+    dummy_sep = [['Mannequin {}'.format(i),
+                  'Mannqeuin {} Texte'.format(i), 
+                  'Mannequin {} Remarques'.format(i)] for i in ['11','12','13','14','15','16','17','18','19','21','22','23','24','25','26','27','28','29']]
+    sep = np.concatenate((sep, np.concatenate(dummy_sep)))
+    faro_points = dict.fromkeys(sep)
+    start = np.array(list(filter(lambda i: x[i] in sep, range(len(x)))))
+    end = np.append(start[1:], len(x))
+    
+    for istart, iend in zip(start, end):
+        x_sub = x[istart:iend]
+        if list(filter(lambda x: x not in kws, x_sub[1:])): #if no measures
+            continue
+        mes = x_sub[0]
+        try:
+            x_sub[8:].reshape(-1, 5)
+            faro_points[mes] = pandas.DataFrame(x_sub[8:].reshape(-1, 5))     
+        except:
+            faro_points[mes] = x_sub[1:]
+    
+
 def delete_tests(testlist, directory):
     """deletes tests specified in testlist.
     testlist is a list of the tests to be deleted from the HDF5 store.

@@ -271,7 +271,8 @@ def plot_bands(ax, t, x, **kwargs):
             sns_df.append(df)
     sns_df = pd.concat(sns_df, axis=0)
     ax = sns.lineplot(x='time', y='signal', hue='grp', data=sns_df, ax=ax, **kwargs)
-    return ax
+    lines = ax.lines[:len(x)]
+    return ax, lines
 
     
 def plot_scatter(ax,x,y,marker_specs={}):
