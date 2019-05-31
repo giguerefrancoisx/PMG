@@ -96,6 +96,7 @@ def condense_df(df, thresh=0.05, thresh_type='upper_bound', axis=0):
         outside: thresh is a list of length 2. filters out all rows/columns where values are between the lower and upper values in thresh.
     axis=0 removes rows. axis=1 removes columns
     """
+    df = df.dropna(axis=0, how='all').dropna(axis=1, how='all')
     if thresh_type=='upper_bound':
         drop = (df > thresh).all(axis=1-axis)
     elif thresh_type=='lower_bound':

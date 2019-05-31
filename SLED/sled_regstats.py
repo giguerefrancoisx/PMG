@@ -181,7 +181,8 @@ for d in dummies:
             
             # set labels and font sizes
             ax = set_labels(ax, {'title': rename(ch), 'ylabel': get_units(ch)})
-            ax = adjust_font_sizes(ax, {'ticklabels':20,'title':24,'ylabel':20})
+            ax = adjust_font_sizes(ax, {'ticklabels':22,'title':28,'ylabel':26})
+#            ax = adjust_font_sizes(ax, {'ticklabels':20,'title':24,'ylabel':20})
 #            ax.legend(ncol=2,bbox_to_anchor=(1,1))
             if ch in thresholds:
                 for i in range(len(thresholds[ch])):
@@ -347,7 +348,7 @@ for ch in plot_channels:
 
 #%% plot time series one test at a time
 subset = (table.query('DUMMY==\'Y2\'')
-               .table.query_list('INSTALL',['C1'])
+               .table.query_list('INSTALL',['B11'])
 #               .table.query_list('MODEL',models)
                .table.query_list('SLED',['new_accel','new_decel']))
 
@@ -523,8 +524,9 @@ coefs = pd.Series(model.coef_, index=x.columns)
 keep_cols = coefs[coefs.abs()>0]
 print(keep_cols)
 #%% regression
-ch0_list = ['Tmin_DDown_y']
-plot_channels = ['Tmin_DDown_x']
+ch0_list = ['Chest_3ms']
+plot_channels = ['Min_DDown_x',
+                 'TDDown_y-Angle']
 
 subset = (table.query('DUMMY==\'Y2\'')
 #               .drop(['SE16-0253','SE16-0257','SE16-0351', 'SE16-0364'])
@@ -571,8 +573,10 @@ for ch0 in ch0_list:
         
         fig, ax = plt.subplots()
         ax = plot_scatter(ax, x, y, marker_specs={k: {'markersize': 10} for k in x})
-        ax = set_labels(ax, {'title': 'Combined R=' + combined_rsq,'xlabel': ' '.join((xname,xunit)), 'ylabel': ' '.join((yname, yunit)),'legend': {'bbox_to_anchor': (0.95,-0.35)}})
-        ax = adjust_font_sizes(ax,{'ticklabels':20,'axlabels':20,'legend':20,'title':24})
+        ax = set_labels(ax, {'title': 'Combined R=' + combined_rsq,'xlabel': ' '.join((xname,xunit)), 'ylabel': ' '.join((yname, yunit)),'legend': {'bbox_to_anchor': (0.95,-0.36)}})
+#        ax = adjust_font_sizes(ax,{'ticklabels':20,'axlabels':20,'legend':20,'title':24})
+        ax = adjust_font_sizes(ax,{'ticklabels':22,'axlabels':24,'legend':24,'title':28})
+        ax.set_ylim([40, 60])
         rename_legend(ax, renamed)
         plt.show()
         
