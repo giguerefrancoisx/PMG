@@ -152,7 +152,10 @@ class SuffixAutomaton(STree):
                         break
                 raise Exception('Error finding node for string ' + s)
         return node, left_s
-
+    
+    def _edgeLabel(self, node, parent):
+        if node.idx==parent.idx:
+            return super()._edgeLabel(node, parent)
     
     def _delete_edge(self, u, v):
         # delete link leading from u to v
@@ -164,7 +167,7 @@ class SuffixAutomaton(STree):
         if hasattr(v, 'connections') and v.parent is None and len(v.transition_links)==0:
             while len(v.connections)>0:
                 w = v.connections.pop()
-                suffix = self._delete_source_link(w, v)
+                suffix = self._delete_source_link(w, v, return_suffix=True)
                 if v._suffix_link:
                     w._add_transition_link(v._suffix_link, suffix=suffix)
                 else:
