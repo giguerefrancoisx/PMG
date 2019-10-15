@@ -9,9 +9,9 @@ import pandas as pd
 def get(project):
     """Given a project name (eg: 'THOR') return the appropriate table"""
     if project == 'THOR':
-        table = pd.read_excel('P:/AHEC/thortable.xlsx', sheetname='All')
+        table = pd.read_excel('P:/Data Analysis/Projects/AHEC/thortable.xlsx', sheet_name='All')
     elif project =='AHEC':
-        table = pd.read_excel('P:/AHEC/ahectable.xlsx')
+        table = pd.read_excel('P:/Data Analysis/Projects/AHEC/ahectable.xlsx')
     elif project == 'BOOSTER':
         table = pd.read_excel('P:/BOOSTER/boostertable.xlsx')
     elif project == 'SLED':

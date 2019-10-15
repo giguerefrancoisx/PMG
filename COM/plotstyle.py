@@ -290,7 +290,7 @@ def subplots(r, c, sharex='none', sharey='none', visible=True, figsize=None, **k
                 ax.yaxis.set_tick_params(which='both', labelleft=True, labelright=False)
                 ax.yaxis.offsetText.set_visible(True)
 
-        return fig, axs
+        return fig, list(axs)
 
     elif any([sharex == 'all', sharex == 'row', sharex == 'col',
               sharex == 'none']):

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import PMG.COM.data as dat
 import PMG.COM.table as tb
 import PMG.COM.plotstyle as style
-THOR = 'P:/AHEC/Data/THOR/'
+THOR = 'P:/Data Analysis/Projects/AHEC/Data/THOR/'
 chlist = []
 chlist.extend(['11NECKLO00THFOXA','11NECKLO00THFOYA','11FEMRLE00THFOZB'])
 chlist.extend(['11CHSTLEUPTHDSXB','11CHSTRIUPTHDSXB','11CHSTLELOTHDSXB','11CHSTRILOTHDSXB'])
@@ -114,17 +114,20 @@ if 1:
     fig, axs = style.subplots(3, 2, sharex='all', sharey=[1,2,3,3,3,3], figsize=(7,6.5))
 
     for i, channel in enumerate(chlist):
-        df = fulldata[channel].dropna(axis=1)
-        df = df.loc[:,slips+oks]
+        df = fulldata[channel].dropna(axis=0).dropna(axis=1)
+#        df = df.loc[:,slips+oks]
+        df.reindex(slips+oks, axis=1)
+        df_slip = df.reindex(slips, axis=1)
+        df_ok = df.reindex(oks, axis=1)
 
         window = 100
         alpha = 0.10
-        slip_median = df.loc[:,slips].median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
-        ok_median = df.loc[:,oks].median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
-        slip_high = df.loc[:,slips].quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
-        slip_low = df.loc[:,slips].quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
-        ok_high = df.loc[:,oks].quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
-        ok_low = df.loc[:,oks].quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        slip_median = df_slip.median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        ok_median = df_ok.median(axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        slip_high = df_slip.quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        slip_low = df_slip.quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        ok_high = df_ok.quantile(1-alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
+        ok_low = df_ok.quantile(alpha/2, axis=1).rolling(window,0,center=True,win_type='triang').mean()
 
         axs[i].plot(time, slip_median, color=slip_color, label='Slip Median, n={}'.format(len(slips)))
         axs[i].plot(time, ok_median, color=ok_color, label='No-Slip Median, n={}'.format(len(oks)))
@@ -374,8 +377,8 @@ allpeaks = {}
 alltimes = {}
 for ch in allchannels[0]+allchannels[1]:
     for group, label in zip([slips, oks], ['Slip', 'No-Slip']):
-            df = fulldata[ch].dropna(axis=1).loc[600:2101,group].dropna(axis=1)
-            sm = dat.smooth_peaks(df)
+            df = fulldata[ch].dropna(axis=1).loc[600:2101,group].dropna(axis=0).dropna(axis=1)
+            sm = df#dat.smooth_peaks(df)
             allpeaks[ch+label], times = dat.find_peak(df.rolling(30,0,center=True,win_type='triang').mean(), time[600:2101])
             peaks, alltimes[ch+label] = dat.find_peak(sm, time[600:2101])
 #%% FIGURE - BOOTSTRAPPED PEAK - BOXPLOT COMBINED
