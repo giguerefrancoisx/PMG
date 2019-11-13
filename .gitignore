@@ -26,3 +26,4 @@ SLED/__pycache__/sled_initialize.cpython-37.pyc
 *.html
 SLED/temp-plot.html
 *.html
+chromedriver.exe
