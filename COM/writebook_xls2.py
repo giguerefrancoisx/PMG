@@ -89,28 +89,44 @@ def read_excel(path, delete_cols=[]):
     if len(delete_cols)>0:
         testframe = testframe.drop([col for col in delete_cols if col in testframe.columns], axis=1)
     return testframe
-    
+
+# TO DO: parse vehicle info
+def import_faro_data(path):
+    """imports and preprocesses faro data specified by path"""
+    faro_data = read_faro(path)
+    split = split_sections(faro_data)
+    split['crash_info'] = parse_crash_info(split['crash_info'])
+    split['dummy_info'] = parse_dummy_info(split['dummy_info'])
+    split['faro_points'] = parse_faro_points(split['faro_points'], 
+                                             {'Cible': split['crash_info']['TC1'],
+                                              'Bélier': split['crash_info']['TC2']},
+                                              treat_exceptions='pad')
+    return split
+
 
 def read_faro(path, delete_cols=[]):
-    faro_data = pandas.read_excel('C:\\Users\\tangk\\Desktop\\TC18-214VSTC13-024Mesures Faro.xls', header=None)
+    """reads the excel file where the faro measures are stored
+    returns faro_data, an array of all the elements with blank spaces dropped"""
+#    faro_data = pandas.read_excel('C:\\Users\\tangk\\Desktop\\TC18-214VSTC13-024Mesures Faro.xls', header=None, na_values=[''], keep_default_na=False)
+    faro_data = pandas.read_excel(path, header=None, na_values=[''], keep_default_na=False)
     faro_data = faro_data.reset_index(drop=True).dropna(axis=0, how='all').dropna(axis=1, how='all')
-    faro_data = np.concatenate(faro_data.apply(lambda x: tuple(x.dropna()), axis=1).values)
+    faro_data = numpy.concatenate(faro_data.apply(lambda x: tuple(x.dropna()), axis=1).values)
     return faro_data
 
 def split_sections(faro_data):
     """splits the sections of faro_data into: crash_info, dummy_info, vehicle_info, faro_points"""    
     # crash_info: starts at the beginning of the doc and continues until just before 'Cible'
     # last entry is 'Vitesse'
-    cib_loc = np.where(faro_data=='Cible')[0]
-    crash_info_end = cib_loc
-    crash_info_end = crash_info_end[crash_info_end > np.where(faro_data=='Vitesse')[0][0]]
-    crash_info_end = crash_info_end[np.where(faro_data[crash_info_end+1] == '11')[0][0]]
+    cib_loc = numpy.where(faro_data=='Cible')[0]
+    crash_info_end = cib_loc[0]-1
+#    crash_info_end = crash_info_end[crash_info_end > numpy.where(faro_data=='Vitesse')[0][0]]
+#    crash_info_end = crash_info_end[numpy.where(faro_data[crash_info_end+1] == '11')[0][0]]
     
     # dummy_info: starts at 'Cible' and ends where 'Cible' follows 'Attitudes (mm)'
-    dummy_info_end = cib_loc[np.where(faro_data[cib_loc+1]=='Attitudes (mm)')[0][0]]
+    dummy_info_end = numpy.where(faro_data=='Attitudes (mm)')[0][0]
 
     # vehicle info: ends with 'Mesures'
-    vehicle_info_end = np.where(faro_data=='Mesures Véhicule')[0][0]
+    vehicle_info_end = numpy.where(faro_data=='Mesures Véhicule')[0][0]
     
     split = {'crash_info': faro_data[:crash_info_end],
              'dummy_info': faro_data[crash_info_end:dummy_info_end],
@@ -121,11 +137,12 @@ def split_sections(faro_data):
 
 def parse_crash_info(x):
     """takes an input of faro data of type crash_info and parses """
+    
     crash_info = {'TC1': x[0],
                   'TC2': x[1],
-                  'test_type': x[2],
-                  'time': x[3]}
-    x = x[4:]
+                  'test_type': x[2]}
+    start = numpy.where(x=='TC_Vehicule')[0][0]
+    x = x[start:]
     # assume that each element in x follows keyword --> value 
     if len(x)%2>0: # if an odd number of elements, assume vitesse has not been filled
         x = x[:-1].reshape(-1, 2).tolist()
@@ -142,42 +159,98 @@ def parse_crash_info(x):
     return crash_info
 
 
-# work on this later
 def parse_dummy_info(x):
-    x = x.tolist()
+    """takes an input of fara data of type dummy_info and parses"""
+    dummy_info = {'Pos': [], 'Dummy': [], 'Dummy_id': [], 'Params': []}
+    
     r = re.compile('^\d{2}$')
-    pos = list(filter(r.match, x))
-    pos_i = list(filter(lambda i: x[i] in pos, range(len(x))))
+    pos = list(filter(r.match, x.tolist()))
+    starts = list(filter(lambda i: x[i] in pos, range(len(x))))
+    ends = starts[1:] + [len(x)-1]
     
-    dummy_info = dict.fromkeys(pos)
-    kws = ['Facing','Child restraint','Child seat restraint','Tether','Seat','Seat config','Seat base',
-           'Belt side','Seat belt adj','Load cell','Handle','Contact']       
-    
-    return x
+    for start, end in zip(starts, ends):
+        # assume the data always starts with: 
+        # [0] position
+        # [1] dummy
+        # [2] dummy id
+        dummy_info['Pos'].append(x[start])
+        dummy_info['Dummy'].append(x[start+1])
+        dummy_info['Dummy_id'].append(x[start+2])
+        kws = ['Facing', 'Child restraint', 'Child seat restraint',
+               'Tether', 'Seat type', 'Seat config', 'Seat base', 'Belt side',
+               'Seat belt adj', 'Load cell', 'Handle', 'Contact', 'Bélier']
+        if end-start-2>0:
+            params = [i for i in x[start+3:end] if i not in kws]
+        else:
+            params = ['none']
+        dummy_info['Params'].append(params)
+    dummy_info = pandas.DataFrame(dummy_info)
+    return dummy_info
     
 # work on this later
-def parse_faro_points(x):
-    kws = ['ID','X','Y','Z','Description']
-    sep = ['Mesures Véhicule', 'Offset du point 1060', 'Mesures AX', 
-           'Mesures BX', 'Mesures DPD','Emplacement des accéléromètres']
-    dummy_sep = [['Mannequin {}'.format(i),
-                  'Mannqeuin {} Texte'.format(i), 
-                  'Mannequin {} Remarques'.format(i)] for i in ['11','12','13','14','15','16','17','18','19','21','22','23','24','25','26','27','28','29']]
-    sep = np.concatenate((sep, np.concatenate(dummy_sep)))
-    faro_points = dict.fromkeys(sep)
-    start = np.array(list(filter(lambda i: x[i] in sep, range(len(x)))))
-    end = np.append(start[1:], len(x))
+def parse_faro_points(x, test_info, treat_exceptions=None, verbose=0):
+    """takes an input of faro data of type faro_points and parses the data. Returns
+    a dict with the details of each subsection.
     
-    for istart, iend in zip(start, end):
-        x_sub = x[istart:iend]
-        if list(filter(lambda x: x not in kws, x_sub[1:])): #if no measures
+    test_info is a dict of {'Cible': TC id of cible, 'Bélier': TC id of belier}
+    
+    treat_exceptions specifies how to treat cases where the number of elements is not 
+    divisible by the number of columns. options are:
+        None: will return an exception if the 
+        'remove_last': will remove the remainder so that the array can be reshaped
+        'pad': will pad with 'NA' until the array can be reshaped"""
+
+    # get all the headers
+    all_headers = ['Mesures Véhicule', 'Offset du point 1060', 'Mesures AX', 
+                   'Mesures BX', 'Mesures DPD','Emplacement des accéléromètres'] +\
+                       ['Mannequin {0}{1}'.format(i,j) \
+                        for i in ['11','12','13','14','15','16','17','18','19',
+                                  '21','22','23','24','25','26','27','28','29'] \
+                                  for j in ['',' Texte',' Remarques'] ]
+    
+    faro_points = dict.fromkeys(all_headers)
+    
+    # start and end indices for each section as specified in the headers
+    starts = numpy.array(list(filter(lambda i: x[i] in all_headers, range(len(x))))) 
+    ends = numpy.append(starts[1:], len(x))
+    
+    for start, end in zip(starts, ends):
+        # get the header and column names
+        header_name = x[start]
+        if 'Texte' in header_name:
+            if 'Cible' in x[start:end]:
+                columns = [test_info['Cible'], 'Description']
+            elif 'Bélier' in x[start:end]:
+                columns = [test_info['Bélier'], 'Description']
+        elif 'Remarques' in header_name:
+            columns = ['Remarques']
+        else:
+            columns = ['ID','X','Y','Z','Description']
+        
+        # find where values start
+        column_indices = [i for i in range(start,end) if x[i] in columns]
+        if (len(column_indices)==0):
+            if verbose:
+                print('No data in section ' + header_name)
             continue
-        mes = x_sub[0]
-        try:
-            x_sub[8:].reshape(-1, 5)
-            faro_points[mes] = pandas.DataFrame(x_sub[8:].reshape(-1, 5))     
-        except:
-            faro_points[mes] = x_sub[1:]
+        elif (end - column_indices[-1] - 1 < len(columns)):
+            if verbose:
+                print('No data in section ' + header_name)
+            continue
+        
+        measures = x[column_indices[-1]+1:end]
+        remainder = len(measures)%len(columns)
+        if remainder!= 0:
+            if treat_exceptions is None:
+                raise Exception('Error parsing the data for ' + header_name)
+            elif treat_exceptions=='remove_last':
+                measures = measures[:-remainder]
+            elif treat_exceptions=='pad':
+                measures = numpy.append(measures, numpy.repeat('NA', len(columns)-remainder))
+                
+        faro_points[header_name] = pandas.DataFrame(measures.reshape(-1,len(columns)), columns=columns)
+    return faro_points
+
     
 
 def delete_tests(testlist, directory):
