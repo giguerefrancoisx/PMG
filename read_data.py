@@ -14,9 +14,10 @@ from PMG.COM.helper import ordered_intersect, condense_df
 import json
 # reads data and returns dictionary 
 
-def read_table(file):
+def read_table(file, header=[0, 1], index_col=0):
     """Reads a csv file and uses SE or TC column as the index"""
-    table = pd.read_csv(file)
+    table = pd.read_csv(file, header=header, index_col=index_col)
+    
     if 'ID' in table.columns:
         table = table.set_index('ID',drop=True)
     elif 'SE' in table.columns:

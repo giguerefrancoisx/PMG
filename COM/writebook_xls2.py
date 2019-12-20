@@ -284,7 +284,7 @@ def check_testframe(tf):
         tf = tf.drop('T_10000_0', axis=1)
     ch_names = tf.filter(regex='[A-Z0-9]\d[A-Z0-9]{14}', axis=1).columns
     if len(ch_names) !=  len(tf.columns):
-        return 'colnames' + str(tf.columns.drop(ch_names))
+        return 'unrecognized columns: ' + str([i for i in tf.columns if i not in ch_names])
     return 'ok'
 
 
