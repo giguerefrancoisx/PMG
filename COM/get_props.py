@@ -8,9 +8,16 @@ import numpy as np
 import scipy.signal as signal
 import pandas as pd
 from scipy.integrate import trapz, simps
+from PMG.COM.OLC import olc
 #from PMG.COM.intersection import intersection
 # get properties of curves
 
+def get_olc(data):
+    if np.isnan(data).all():
+        return np.nan
+    else:
+        return olc(data)
+    
 def get_min(data):
     if np.isnan(data).all():
         return np.nan
