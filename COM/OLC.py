@@ -11,11 +11,11 @@ import matplotlib.pyplot as plt
 from scipy.integrate import cumtrapz
 
 
-def olc(vehicle_acc, time=None, idx_stop=None):
+def olc(vehicle_acc, time=None, idx_stop=None, return_olc_info=False):
     if time is None:
         time = np.arange(0, len(vehicle_acc)*0.0001, 0.0001)
     if idx_stop is None:
-        idx_stop = 1000
+        idx_stop = 730
     if not isinstance(vehicle_acc, np.ndarray):
         try:
             vehicle_acc = np.array(vehicle_acc)
@@ -40,22 +40,29 @@ def olc(vehicle_acc, time=None, idx_stop=None):
     index1 = np.abs(occupant_dis_phase_1-vehicle_dis-0.065).argmin() #Find where the difference is 65 mm
     t1 = time[index1] #Find the time at that point (s)
 
-    index2 = np.abs(((v_0+vehicle_vel)/2*(time-t1)-(vehicle_dis-vehicle_dis[index1])-0.235)[index1:]).argmin() #Find where the difference is 235 mm
+    index2 = index1 + np.abs(((v_0+vehicle_vel)/2*(time-t1)-(vehicle_dis-vehicle_dis[index1])-0.235)[index1:]).argmin() #Find where the difference is 235 mm
     t2 = time[index2] #Find the time at that point (s)
     v_f = vehicle_vel[index2]
     occupant_dis_phase_2 = v_0*time-(v_0-v_f)/2*(time-t1)**2/(t2-t1)
     
     occupant_dis = np.concatenate((occupant_dis_phase_1[:index1],
-                                   occupant_dis_phase_2[index1:index2],
-                                   occupant_dis_phase_2[index2:]*0+float('nan')))
+                                   occupant_dis_phase_2[index1:index2+1],
+                                   occupant_dis_phase_2[index2+1:]*0+float('nan')))
 
 
     occupant_vel = np.diff(occupant_dis)/dt #in m/s
     OLC = (v_0-v_f)/(t2-t1)/9.81 # g
     
-    return OLC
-
-
+    
+    if return_olc_info:
+        return {'OLC': OLC,
+                't1': t1,
+                't2': t2,
+                'vf': v_f,
+                'dx_at_t1': occupant_dis[index1]-vehicle_dis[index1],
+                'dx_at_t2': occupant_dis[index2-1]-vehicle_dis[index2-1]}
+    else:
+        return OLC
 
 
 

@@ -51,11 +51,21 @@ class ChData(object):
 class Table(object):
     def __init__(self, pandas_obj):
         self._obj = pandas_obj
+        
+    def multi_index_query(self, cols, query):
+        df = self._obj
+        return df.loc[df[cols].query(query).index]
     
     def query_list(self, column,qlist):
         """ queries a dataframe by whether column contains qlist """
+        # for multi index columns
         df = self._obj
-        return df[df[column].isin(qlist)]
+        
+        
+        
+        # for single index columns
+#        df = self._obj
+#        return df[df[column].isin(qlist)]
     
     def names_to_se(self, names):
         """ return a dict {categorical names: corresponding tcs}

@@ -78,16 +78,20 @@ def read_from_common_store(tc,channels,verbose=False):
     return t, ch_fulldata
 
 
-def filter_table(table, drop=None, query=None, query_list=[], filt=None):
+def filter_table(table, drop=None, query=None, multi_index_query=None, query_list=None, filt=None):
     """filters the table. """
-    if not drop==None:
+    if drop is not None:
         table = table.drop(drop, axis=0)
-    if not query==None:
+    if multi_index_query is not None:
+        for q in multi_index_query:
+            # q is a list-like of [cols, query]
+            table = table.table.multi_index_query(q[0], q[1])
+    if query is not None:
         table = table.query(query)
-    if len(query_list)>0:
+    if query_list is not None:
         for q in query_list:
             table = table.table.query_list(q[0], q[1])
-    if not filt==None:
+    if filt is not None:
         table = table.filter(items=filt)
     return table
 

@@ -29,15 +29,15 @@ def match_columns(table, regex='\d{2}[A-Z0-9]{14}'):
     return -1
 
 
-def get_colnames(table, channel_exp='\d{2}[A-Z0-9]{14}', time_exp='T_10000_0'):
+def get_colnames(table, channel_exp='\d{2}[A-Z0-9]{14}', time_exp='000000000000TI00'):
+#def get_colnames(table, channel_exp='\d{2}[A-Z0-9]{14}', time_exp='T_10000_0'):
     row = match_columns(table, regex=channel_exp)
     t_row = match_columns(table, regex=time_exp)
     if row!=t_row: 
-        print('Error: time column and channel column were not in the same row. Check data.')
-        return
+        raise Exception('Error: time column and channel column were not in the same row. Check data.')
     names = table.loc[row].to_dict()
     return names, row
-    
+
     
 def get_data(table, row_start=0, colnames={}):
     """table is a pandas DataFrame
