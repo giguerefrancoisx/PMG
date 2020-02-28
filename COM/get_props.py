@@ -29,6 +29,14 @@ def get_max(data):
         return np.nan
     else:
         return max(data)
+    
+def get_peak(data):
+    if np.isnan(data).all():
+        return np.nan
+    elif abs(min(data)) > abs(max(data)):
+        return min(data)
+    else:
+        return max(data)
 
 def get_argmin(data):
     if np.isnan(data).all():
